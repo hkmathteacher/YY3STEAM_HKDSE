@@ -229,7 +229,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- 設定 ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vU5JkB4zhmMU5pMdQ8QjnAoqTwQ7iaXKK5OFlBX0UIr0brrevZ7nUeQriiy_eMgd2g/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzMAAGK8egg_0xodccJFgJRxtl97nqJDoHZvbx9wo_iT4sgXTgHtwzYc1AEVICtBSbD4Q/exec';
 
         // --- 全局變數和常數 ---
         const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
@@ -542,7 +542,8 @@
                 subject: item.querySelector('.subject').value,
                 hours: parseFloat(item.querySelector('.hours').value) || 0,
                 content: item.querySelector('.content').value.trim(),
-            })).filter(item => item.content || item.hours > 0);
+            // 修正 1: 只有在時數大於0時，該項目才有效
+            })).filter(item => item.hours > 0);
             
             await gasService.saveStudentData(state.viewingStudentId, recordList.dataset.date, JSON.stringify(dataToSave));
             await loadStudentData(state.viewingStudentId);
@@ -573,7 +574,7 @@
             "name": "YY3 STEAM HKDSE 衝刺計劃",
             // 修正 2: 更新 PWA 短名稱
             "short_name": "STEAM衝刺",
-            "description": "一個為 YY3 STEAM 設計的HKDSE溫習進度追蹤工具",
+            "description": "一個為 HKDSE 考生設計的溫習進度追蹤工具",
             "start_url": ".",
             "display": "standalone",
             "background_color": "#ffffff",
@@ -603,4 +604,5 @@
     </script>
 </body>
 </html>
+
 
