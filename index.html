@@ -1,682 +1,465 @@
 <!DOCTYPE html>
-<html lang="zh-Hant" class="dark">
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YY3 STEAM HKDSE 衝刺計劃</title>
     
-    <!-- PWA (Progressive Web App) 設定 -->
-    <link rel="manifest" href="data:application/manifest+json;base64,ewogICJuYW1lIjogIllZMyBURUFNIEhLRFNFIOS6iOWFu+iKgueUnyIsCiAgInNob3J0X25hbWUiOiAiSEtEU0Ug5LqI5YW7IiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMTExMWIiLAogICJ0aGVtZV9jb2xvciI6ICIjMWMyYzRiIiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9pbWFnZS5mbGF0aWNvbi5jb20vNTEyLzI5MTMvMjkxMzgwNC5wbmciLAogICAgICAic2l6ZXMiOiAiNTEyeDUxMiIsCiAgICAgICJ0eXBlIjogImltYWdlL3BuZyIKICAgIH0KICBdCn0=">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="HKDSE 衝刺">
-    <link rel="apple-touch-icon" href="https://image.flaticon.com/512/2913/2913804.png">
-
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+      // Tailwind CSS Dark Mode Configuration
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    
+    <!-- PWA Manifest (Embedded) & Theme -->
+    <link id="manifest-link" rel="manifest">
+    <meta name="theme-color" content="#4a90e2" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#1e3a8a" media="(prefers-color-scheme: dark)">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/4a90e2/ffffff?text=YY3">
+
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
-        .calendar-day { aspect-ratio: 1 / 1; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-        /* Chart.js dark mode styles */
-        .chart-container { position: relative; height: 60vh; width: 90vw; }
+        /* 基本樣式與動畫 */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+        }
+        .page { display: none; }
+        .page.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .modal-backdrop {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 50; opacity: 0; visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.active { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.9); transition: transform 0.3s ease; }
+        .modal-backdrop.active .modal-content { transform: scale(1); }
+
+        /* 日曆樣式 */
+        .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        .dse-day { position: relative; }
+        .dse-day::after {
+            content: attr(data-subject); position: absolute;
+            bottom: 2px; left: 0; right: 0; font-size: 0.6rem; line-height: 0.7rem;
+            color: #c0392b; font-weight: bold; text-align: center;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        html.dark .dse-day::after { color: #f87171; }
+        
+        /* 載入中動畫 */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 100; opacity: 0; visibility: hidden; transition: opacity 0.3s;
+        }
+        #loader.active { opacity: 1; visibility: visible; }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #fff;
+            width: 40px; height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body class="bg-gray-900 text-gray-200 flex items-center justify-center min-h-screen antialiased">
-    <div id="app-container" class="w-full max-w-md h-screen bg-gray-900 flex flex-col">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
 
-        <!-- ===== 登入頁面 ===== -->
-        <div id="login-page" class="flex flex-col h-full justify-center p-8 text-center">
-            <header class="mb-8">
-                <h1 class="text-3xl font-bold text-sky-400">YY3 STEAM</h1>
-                <h2 class="text-4xl font-bold text-sky-300 mt-1">HKDSE 衝刺計劃</h2>
-            </header>
-            
-            <div class="mb-6 text-left">
-                <p id="dse-countdown" class="text-lg text-amber-400 font-semibold mb-4 text-center"></p>
-                <p id="motivational-quote" class="text-gray-400 italic text-center h-12"></p>
+    <!-- 載入中動畫 -->
+    <div id="loader"><div class="spinner"></div></div>
+
+    <!-- 主容器 -->
+    <div id="app" class="max-w-4xl mx-auto min-h-screen bg-white dark:bg-gray-800 shadow-lg">
+
+        <!-- 登入頁面 -->
+        <div id="login-page" class="page active">
+            <div class="min-h-screen flex flex-col items-center justify-center bg-blue-50 dark:bg-gray-900 p-4">
+                <div class="w-full max-w-sm text-center">
+                    <h1 class="text-3xl font-bold text-blue-800 dark:text-blue-300">YY3 STEAM</h1>
+                    <h2 class="text-4xl font-extrabold text-blue-600 dark:text-blue-400 mb-6">HKDSE 衝刺計劃</h2>
+                    
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md mb-6">
+                        <p class="text-lg text-gray-600 dark:text-gray-400 mb-1">距離 DSE 尚餘</p>
+                        <div id="countdown-timer" class="text-4xl font-bold text-red-500">-- 天 --:--:--</div>
+                        <p id="motivational-quote" class="text-gray-700 dark:text-gray-300 italic px-4 py-2 bg-yellow-100 dark:bg-yellow-900/50 border-l-4 border-yellow-400 rounded-r-lg mt-4"></p>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md">
+                        <input id="login-id" type="text" placeholder="使用者 ID" class="w-full px-4 py-3 mb-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input id="login-password" type="password" placeholder="密碼" class="w-full px-4 py-3 mb-6 border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="login-button" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-500 transition-colors">登入</button>
+                        <p id="login-error" class="text-red-500 dark:text-red-400 mt-4 h-5"></p>
+                    </div>
+                </div>
+                <div class="absolute bottom-4 right-4 text-xs text-gray-400 dark:text-gray-500">
+                    <p>Lonely Chan & AI 共同開發</p>
+                </div>
             </div>
-            
-            <input id="id-input" type="text" placeholder="輸入ID" class="w-full p-3 mb-4 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-            <input id="pw-input" type="password" placeholder="輸入密碼" class="w-full p-3 mb-6 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-sky-500">
-            <button id="login-btn" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-bold p-3 rounded-lg transition-colors duration-200">登入</button>
-            <p id="login-error" class="text-red-400 mt-4 h-5"></p>
         </div>
 
-        <!-- ===== 主頁面 (學生) ===== -->
-        <div id="main-page" class="hidden flex-col h-full">
-            <header class="p-4 flex justify-between items-center bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
-                <div>
-                    <h1 class="text-xl font-bold text-sky-400">溫習日曆</h1>
-                    <p id="current-user-id" class="text-sm text-gray-400"></p>
+        <!-- 學生/管理員主頁面 -->
+        <div id="main-page" class="page">
+            <header class="bg-blue-600 dark:bg-blue-900 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md">
+                <div id="header-left">
+                    <h1 id="main-title" class="text-xl font-bold">溫習日曆</h1>
+                    <div id="admin-controls" class="hidden mt-2">
+                        <select id="student-selector" class="bg-blue-700 dark:bg-blue-800 text-white border border-blue-400 dark:border-blue-600 rounded-md py-1 px-2 text-sm">
+                            <option value="">選擇學生</option>
+                        </select>
+                    </div>
                 </div>
-                <div>
-                    <button id="stats-btn" class="text-gray-300 hover:text-white mr-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                    </button>
-                    <button id="logout-btn" class="text-gray-300 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    </button>
+                <div class="flex items-center space-x-2">
+                    <button id="theme-toggle-button" class="p-2 rounded-full hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"></button>
+                    <button id="stats-button" class="bg-white text-blue-600 dark:bg-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-600 transition">統計</button>
+                    <button id="logout-button" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-red-600 transition">登出</button>
                 </div>
             </header>
-            <div class="flex-grow p-4 overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <button id="prev-month-btn" class="p-2 rounded-full hover:bg-gray-700">&lt;</button>
-                    <h2 id="month-year-label" class="text-lg font-semibold"></h2>
-                    <button id="next-month-btn" class="p-2 rounded-full hover:bg-gray-700">&gt;</button>
+
+            <main class="p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <button id="prev-month" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">&lt;</button>
+                    <h2 id="current-month-year" class="text-2xl font-bold"></h2>
+                    <button id="next-month" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600">&gt;</button>
                 </div>
-                <div class="calendar-grid text-center font-semibold text-sm text-gray-400 mb-2">
+
+                <div class="grid calendar-grid gap-1 text-center font-semibold text-gray-600 dark:text-gray-400 mb-2">
                     <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
                 </div>
-                <div id="calendar" class="calendar-grid"></div>
-            </div>
-        </div>
-
-        <!-- ===== 管理員頁面 ===== -->
-        <div id="admin-page" class="hidden flex-col h-full">
-            <header class="p-4 flex justify-between items-center bg-gray-800/50 backdrop-blur-sm border-b border-gray-700">
-                <div>
-                    <h1 class="text-xl font-bold text-sky-400">學生進度</h1>
-                    <select id="student-selector" class="bg-gray-700 text-white rounded-md p-1 mt-1 focus:outline-none"></select>
-                </div>
-                <div>
-                    <button id="admin-stats-btn" class="text-gray-300 hover:text-white mr-2">
-                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-                    </button>
-                    <button id="admin-logout-btn" class="text-gray-300 hover:text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-                    </button>
-                </div>
-            </header>
-            <div class="flex-grow p-4 overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <button id="admin-prev-month-btn" class="p-2 rounded-full hover:bg-gray-700">&lt;</button>
-                    <h2 id="admin-month-year-label" class="text-lg font-semibold"></h2>
-                    <button id="admin-next-month-btn" class="p-2 rounded-full hover:bg-gray-700">&gt;</button>
-                </div>
-                <div class="calendar-grid text-center font-semibold text-sm text-gray-400 mb-2">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-                </div>
-                <div id="admin-calendar" class="calendar-grid"></div>
-            </div>
-        </div>
-        
-        <!-- 全局 Spinner -->
-        <div id="loading-spinner" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-sky-500"></div>
-        </div>
-
-        <!-- 全局訊息提示框 -->
-        <div id="toast-notification" class="hidden fixed bottom-20 left-1/2 -translate-x-1/2 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in">
-            <p id="toast-message"></p>
-        </div>
-
-        <!-- 頁腳 -->
-        <footer class="text-center p-2 text-xs text-gray-600">
-            Lonely Chan & AI 共同開發
-        </footer>
-    </div>
-
-    <!-- ===== 彈出式視窗 (Modals) ===== -->
-
-    <!-- 學生輸入/編輯 Modal -->
-    <div id="edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-40 animate-fade-in">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6">
-            <h2 class="text-xl font-bold mb-2 text-sky-400">溫習紀錄</h2>
-            <p id="modal-date-label" class="text-gray-400 mb-4"></p>
-            <div id="modal-entries-container" class="max-h-60 overflow-y-auto pr-2">
-                <!-- 動態生成的溫習項目會插入到這裡 -->
-            </div>
-            <div class="mt-4 flex justify-between">
-                <button id="add-entry-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg text-sm transition-colors">+</button>
-                <div>
-                    <button id="modal-cancel-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-lg mr-2 transition-colors">取消</button>
-                    <button id="modal-save-btn" class="bg-sky-600 hover:bg-sky-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">儲存</button>
-                </div>
-            </div>
+                <div id="calendar-body" class="grid calendar-grid gap-1"></div>
+            </main>
         </div>
     </div>
 
-    <!-- 統計 Modal -->
-    <div id="stats-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-40 animate-fade-in">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6">
-            <div class="flex justify-between items-center mb-4">
-                 <h2 class="text-xl font-bold text-sky-400">溫習時數統計</h2>
-                 <button id="stats-close-btn" class="text-gray-400 hover:text-white">&times;</button>
+    <!-- 溫習紀錄 Modal -->
+    <div id="record-modal" class="modal-backdrop">
+        <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <h3 id="modal-date" class="text-2xl font-bold mb-4 text-center"></h3>
+            <div id="record-list"></div>
+            <div id="modal-actions" class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                 <button id="add-record-item" class="w-full sm:w-auto flex-grow bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition">新增項目</button>
+                 <div class="w-full sm:w-auto flex flex-grow space-x-2">
+                    <button id="save-records" class="w-1/2 flex-grow bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">儲存</button>
+                    <button id="close-record-modal" class="w-1/2 flex-grow bg-gray-400 dark:bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500 transition">關閉</button>
+                 </div>
             </div>
-            <p id="stats-month-label" class="text-gray-400 text-center mb-2"></p>
-            <p id="stats-total-hours" class="text-3xl font-bold text-center mb-4"></p>
-            <div class="chart-container mx-auto">
-                <canvas id="subject-chart"></canvas>
-            </div>
+            <p id="record-modal-info" class="text-center text-gray-500 mt-4 hidden">管理員唯讀模式</p>
         </div>
     </div>
     
-    <!-- Admin 唯讀檢視 Modal -->
-    <div id="admin-view-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-40 animate-fade-in">
-        <div class="bg-gray-800 rounded-lg shadow-xl w-full max-w-sm p-6">
-             <div class="flex justify-between items-center mb-4">
-                 <h2 class="text-xl font-bold text-sky-400">學生溫習紀錄</h2>
-                 <button id="admin-view-close-btn" class="text-gray-400 hover:text-white">&times;</button>
-            </div>
-            <p id="admin-view-date-label" class="text-gray-400 mb-4"></p>
-            <div id="admin-view-entries-container" class="max-h-60 overflow-y-auto pr-2 text-gray-300">
-                <!-- 唯讀的溫習項目會插入到這裡 -->
+    <!-- 統計 Modal -->
+    <div id="stats-modal" class="modal-backdrop">
+        <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl">
+            <h3 class="text-2xl font-bold mb-2 text-center">當月溫習統計</h3>
+            <p id="stats-user-id" class="text-center text-gray-500 dark:text-gray-400 mb-4"></p>
+            <p class="text-center text-lg mb-4">總時數: <span id="total-hours" class="font-bold text-blue-600 dark:text-blue-400">0</span> 小時</p>
+            <div class="w-full max-w-xs mx-auto"><canvas id="subject-chart"></canvas></div>
+            <div class="mt-6 text-center">
+                <button id="close-stats-modal" class="bg-gray-400 dark:bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500 transition">關閉</button>
             </div>
         </div>
     </div>
 
-
-<script>
-    // ===============================================================
-    // ===             請在此處填入您的 API URL                   ===
-    // ===============================================================
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzsgheZTmPW1MFbeSS84WQII80_1zlPH2SBD6C8h6--hQ1kPq9SaY3S9B16-3zh0xnp/exec';
-    // ===============================================================
-
+    <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- 設定 ---
+        // !!! 重要 !!! 請將此處替換為你部署後的 Google Apps Script Web App 網址
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx5WgyWltWhRIaxAM23k6XUJ2obGMwIy14XxUkrFBXzl2IpPuGt3dKx4AzrY7WyewOkyQ/exec';
 
-        // --- 狀態管理 ---
-        const state = {
+        // --- 全局變數和常數 ---
+        const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
+        const QUOTES = ["每一次的努力，都是未來最好的鋪墊。", "堅持下去，不是因為你會成功，而是因為你不想後悔。", "成功的路上並不擁擠，因為堅持的人不多。", "今天你所受的苦，會照亮你未來的路。", "別讓現在的懶，變成未來的難。", "天賦決定上限，努力決定下限。", "你必須很努力，才能看起來毫不費力。"];
+        const SUBJECTS = ["中文", "英文", "數學", "物理", "化學", "生物", "M2", "中史", "西史", "地理", "經濟", "旅款", "企會財", "ICT", "VA"];
+        const DSE_EXAM_DATES = {'2026-04-08':'視覺藝術', '2026-04-09':'中文', '2026-04-10':'英文(一)(二)', '2026-04-11':'英文(三)', '2026-04-13':'數學', '2026-04-14':'公社', '2026-04-16':'化學', '2026-04-20':'生物', '2026-04-22':'物理', '2026-04-23':'地理', '2026-04-24':'ICT', '2026-04-25':'歷史', '2026-04-27':'企會財', '2026-04-29':'中史', '2026-04-30':'M2', '2026-05-02':'旅款', '2026-05-04':'經濟'};
+
+        let state = {
+            currentPage: 'login-page',
             currentUser: null,
             currentDate: new Date(),
-            adminCurrentDate: new Date(),
-            studyData: {},
-            students: [],
-            currentStudentData: {},
+            studentData: {},
+            viewingStudentId: null,
             chartInstance: null,
         };
+        
+        // --- DOM 元素 ---
+        const loader = document.getElementById('loader');
+        const pages = document.querySelectorAll('.page');
+        const countdownTimerEl = document.getElementById('countdown-timer');
+        const quoteEl = document.getElementById('motivational-quote');
+        const loginIdEl = document.getElementById('login-id');
+        const loginPasswordEl = document.getElementById('login-password');
+        const loginButton = document.getElementById('login-button');
+        const loginErrorEl = document.getElementById('login-error');
+        const currentMonthYearEl = document.getElementById('current-month-year');
+        const calendarBodyEl = document.getElementById('calendar-body');
+        const recordModal = document.getElementById('record-modal');
+        const statsModal = document.getElementById('stats-modal');
+        const themeToggleButton = document.getElementById('theme-toggle-button');
 
-        // --- DOM 元素擷取 ---
-        const pages = {
-            login: document.getElementById('login-page'),
-            main: document.getElementById('main-page'),
-            admin: document.getElementById('admin-page'),
-        };
-        const idInput = document.getElementById('id-input');
-        const pwInput = document.getElementById('pw-input');
-        const loginError = document.getElementById('login-error');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        
-        // --- 常數定義 ---
-        const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
-        const dseExams = {
-            '2026-04-08': '視覺藝術',
-            '2026-04-09': '中國語文 (一)及(二)',
-            '2026-04-10': '英國語文 (一)及(二)',
-            '2026-04-11': '英國語文 (三)',
-            '2026-04-13': '數學 必修部分',
-            '2026-04-14': '公民與社會發展',
-            '2026-04-16': '化學 (一)及(二)',
-            '2026-04-20': '生物 (一)及(二)',
-            '2026-04-22': '物理 (一)及(二)',
-            '2026-04-23': '地理 (一)及(二)',
-            '2026-04-24': '資訊及通訊科技',
-            '2026-04-25': '歷史 (一)及(二)',
-            '2026-04-27': '企會財',
-            '2026-04-29': '中國歷史 (一)及(二)',
-            '2026-04-30': '數學 M1/M2',
-            '2026-05-02': '旅遊與款待',
-            '2026-05-04': '經濟 (一)及(二)',
-        };
-        const motivationalQuotes = [
-            "每一次的努力，都是未來最好的鋪墊。",
-            "堅持下去，不是因為你會成功，而是因為你不想後悔。",
-            "成功的路上並不擁擠，因為堅持的人不多。",
-            "今天你所受的苦，會照亮你未來的路。",
-            "別讓現在的懶，變成未來的難。",
-            "天賦決定上限，努力決定下限。",
-            "你必須很努力，才能看起來毫不費力。"
-        ];
-        const subjects = ['中文', '英文', '數學', '公社', '物理', '化學', '生物', 'M2', '中史', '西史', '地理', '經濟', '旅款', '企會財', 'ICT'];
-        
-        // --- 後端 API 通訊 ---
-        async function callApi(action, payload) {
-            showSpinner();
-            loginError.textContent = '';
+        // --- 後端服務 (真實 API) ---
+        const callGas = async (action, payload = {}) => {
+            if (GAS_URL === '在此貼上你的 Google Apps Script Web App 網址') {
+                alert('錯誤：尚未設定 Google Apps Script Web App 網址！');
+                throw new Error('GAS_URL not configured.');
+            }
+            loader.classList.add('active');
             try {
-                if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === 'YOUR_APPS_SCRIPT_WEB_APP_URL_HERE') {
-                    throw new Error("API URL 尚未設定。");
-                }
-                const response = await fetch(GAS_WEB_APP_URL, {
+                const response = await fetch(GAS_URL, {
                     method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
-                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ action, payload }),
-                    redirect: 'follow'
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS Web App needs text/plain
                 });
-                
-                if (!response.ok) {
-                   throw new Error(`伺服器錯誤: ${response.status} ${response.statusText}`);
-                }
-                
                 const result = await response.json();
-
-                if (!result.success) {
-                    throw new Error(result.message || '發生未知錯誤');
-                }
+                if (!result.success) throw new Error(result.message);
                 return result.data;
-
             } catch (error) {
-                console.error('API 呼叫失敗:', error);
-                loginError.textContent = `與伺服器通訊時發生錯誤: ${error.message}`;
-                return null;
+                console.error('GAS Call Error:', error);
+                alert(`與伺服器通訊失敗: ${error.message}`);
+                throw error;
             } finally {
-                hideSpinner();
+                loader.classList.remove('active');
             }
-        }
+        };
 
-        // --- 核心邏輯 (登入、登出、資料處理) ---
-        async function handleLogin() {
-            const id = idInput.value.trim();
-            const pw = pwInput.value.trim();
-            if (!id || !pw) {
-                loginError.textContent = 'ID和密碼不能為空';
-                return;
-            }
+        const gasService = {
+            login: (id, password) => callGas('login', { id, password }),
+            getStudentData: (studentId) => callGas('getStudentData', { studentId }),
+            saveStudentData: (studentId, dateKey, data) => callGas('saveStudentData', { studentId, dateKey, data }),
+            getAllStudents: () => callGas('getAllStudents'),
+        };
 
-            const data = await callApi('checkLogin', { id, pw });
-            if (data) {
-                state.currentUser = { id, role: data.role };
-                if (data.role === 'admin') {
-                    initializeAdminPage();
-                } else {
-                    initializeMainPage();
-                }
-            }
-        }
+        // --- 核心函式 ---
+        const showPage = (pageId) => {
+            pages.forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            state.currentPage = pageId;
+        };
 
-        function handleLogout() {
-            state.currentUser = null;
-            state.studyData = {};
-            idInput.value = '';
-            pwInput.value = '';
-            loginError.textContent = '';
-            navigateTo('login');
-        }
-
-        async function fetchDataForUser(userId) {
-            const data = await callApi('getStudyData', { userId });
-            if (data !== null) {
-                if (userId === state.currentUser.id) {
-                    state.studyData = data;
-                    renderCalendar(state.currentDate, 'main');
-                } else {
-                    state.currentStudentData = data;
-                    renderCalendar(state.adminCurrentDate, 'admin');
-                }
-            }
-        }
+        const updateCountdown = () => {
+            const diff = DSE_TARGET_DATE - new Date();
+            if (diff <= 0) { countdownTimerEl.textContent = "考試順利！"; return; }
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            countdownTimerEl.textContent = `${days} 天 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        };
         
-        async function fetchStudentsForAdmin() {
-            const studentIds = await callApi('getAllStudentIds', {});
-            if(studentIds){
-                state.students = studentIds;
-                const selector = document.getElementById('student-selector');
-                selector.innerHTML = '';
-                studentIds.forEach(id => {
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = id;
-                    selector.appendChild(option);
-                });
-                if(studentIds.length > 0) {
-                     selector.value = studentIds[0];
-                     fetchDataForUser(studentIds[0]);
-                }
-            }
-        }
-
-        // --- 頁面初始化 ---
-        function initializeMainPage() {
-            document.getElementById('current-user-id').textContent = `你好, ${state.currentUser.id}`;
-            navigateTo('main');
-            fetchDataForUser(state.currentUser.id);
-        }
-
-        function initializeAdminPage() {
-            navigateTo('admin');
-            fetchStudentsForAdmin();
-        }
-
-        // --- 行事曆渲染 ---
-        function renderCalendar(date, mode) {
-            const calendarEl = mode === 'main' ? document.getElementById('calendar') : document.getElementById('admin-calendar');
-            const monthYearLabel = mode === 'main' ? document.getElementById('month-year-label') : document.getElementById('admin-month-year-label');
-            const data = mode === 'main' ? state.studyData : state.currentStudentData;
-
-            calendarEl.innerHTML = '';
-            monthYearLabel.textContent = `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
-
-            const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
-            const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-
-            for (let i = 0; i < firstDay.getDay(); i++) {
-                calendarEl.innerHTML += `<div class="calendar-day"></div>`;
-            }
-
-            for (let i = 1; i <= lastDay.getDate(); i++) {
-                const dayDate = new Date(date.getFullYear(), date.getMonth(), i);
-                const dateString = formatDate(dayDate);
-                const hasData = data[dateString] && ( (Array.isArray(data[dateString]) && data[dateString].length > 0) || (typeof data[dateString] === 'string' && data[dateString]));
-
+        const renderCalendar = () => {
+            calendarBodyEl.innerHTML = '';
+            const year = state.currentDate.getFullYear();
+            const month = state.currentDate.getMonth();
+            currentMonthYearEl.textContent = `${year}年 ${month + 1}月`;
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            for (let i = 0; i < firstDay; i++) calendarBodyEl.innerHTML += `<div class="p-2 border rounded-lg bg-gray-50 dark:bg-gray-700/50 dark:border-gray-700"></div>`;
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const today = new Date();
+                const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+                const hasRecord = state.studentData[dateKey];
+                const isDseDay = DSE_EXAM_DATES[dateKey];
+                let dayClasses = 'p-2 border dark:border-gray-700 rounded-lg cursor-pointer transition-colors relative';
+                if(isToday) dayClasses += ' bg-blue-500 text-white font-bold';
+                else if (hasRecord) dayClasses += ' bg-green-100 dark:bg-green-900/50 hover:bg-green-200 dark:hover:bg-green-900';
+                else dayClasses += ' bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700';
+                if (isDseDay) dayClasses += ' dse-day border-red-400 dark:border-red-600 border-2';
                 const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day flex flex-col items-center justify-center p-1 border border-transparent rounded-lg cursor-pointer transition-colors duration-200';
-                
-                let dayContent = `<span class="text-sm">${i}</span>`;
-                if(hasData){
-                     dayContent += `<span class="text-xl">✅</span>`;
-                }
-
-                if (dseExams[dateString]) {
-                    dayEl.classList.add('bg-amber-800/50');
-                    dayContent += `<span class="text-xs text-amber-300 truncate">${dseExams[dateString]}</span>`;
-                } else if (isToday(dayDate)) {
-                    dayEl.classList.add('bg-sky-800/50');
-                }
-                
-                dayEl.innerHTML = dayContent;
-                
-                dayEl.addEventListener('click', () => {
-                    if(mode === 'main'){
-                        openEditModal(dayDate);
-                    } else {
-                        if (hasData) openAdminViewModal(dayDate);
-                    }
-                });
-
-                calendarEl.appendChild(dayEl);
+                dayEl.className = dayClasses;
+                dayEl.dataset.date = dateKey;
+                if(isDseDay) dayEl.dataset.subject = isDseDay;
+                dayEl.innerHTML = `<span class="text-sm sm:text-base">${day}</span>${hasRecord ? '<span class="absolute top-1 right-1 text-xs">✅</span>' : ''}`;
+                dayEl.addEventListener('click', () => handleDateClick(dateKey));
+                calendarBodyEl.appendChild(dayEl);
             }
-        }
+        };
         
-        // --- 彈出視窗 (Modals) 邏輯 ---
-        function openEditModal(date) {
-            const modal = document.getElementById('edit-modal');
-            const dateString = formatDate(date);
-            document.getElementById('modal-date-label').textContent = dateString;
-            
-            const container = document.getElementById('modal-entries-container');
-            container.innerHTML = '';
-            
-            const entries = state.studyData[dateString] || [];
-            if(entries.length > 0){
-                entries.forEach(entry => container.appendChild(createEntryElement(entry)));
-            } else {
-                container.appendChild(createEntryElement()); // Start with one empty entry
-            }
-
-            modal.dataset.date = dateString;
-            modal.classList.remove('hidden');
-        }
-
-        function createEntryElement(entry = { subject: subjects[0], hours: '', content: '' }) {
-            const div = document.createElement('div');
-            div.className = 'flex items-center space-x-2 mb-2 entry-item';
-            
-            const subjectSelect = document.createElement('select');
-            subjectSelect.className = 'bg-gray-700 text-white p-2 rounded-lg w-1/3 subject-input';
-            subjects.forEach(s => {
-                const option = document.createElement('option');
-                option.value = s;
-                option.textContent = s;
-                if(s === entry.subject) option.selected = true;
-                subjectSelect.appendChild(option);
-            });
-
-            const hoursInput = document.createElement('input');
-            hoursInput.type = 'number';
-            hoursInput.step = '0.01';
-            hoursInput.placeholder = '時數';
-            hoursInput.className = 'bg-gray-700 text-white p-2 rounded-lg w-1/4 hours-input';
-            hoursInput.value = entry.hours;
-
-            const contentInput = document.createElement('input');
-            contentInput.type = 'text';
-            contentInput.placeholder = '內容';
-            contentInput.className = 'bg-gray-700 text-white p-2 rounded-lg w-1/2 content-input';
-            contentInput.value = entry.content;
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.textContent = '−';
-            deleteBtn.className = 'bg-red-600 hover:bg-red-700 text-white font-bold rounded-full w-6 h-6 flex items-center justify-center';
-            deleteBtn.onclick = () => div.remove();
-
-            div.appendChild(subjectSelect);
-            div.appendChild(hoursInput);
-            div.appendChild(contentInput);
-            div.appendChild(deleteBtn);
-            return div;
-        }
+        const handleDateClick = (dateKey) => {
+            const data = state.studentData[dateKey] ? JSON.parse(state.studentData[dateKey]) : [];
+            const isReadOnly = state.currentUser.role === 'admin';
+            if (!isReadOnly || (isReadOnly && data.length > 0)) openRecordModal(dateKey, data, isReadOnly);
+        };
         
-        async function handleSaveContent() {
-            const modal = document.getElementById('edit-modal');
-            const date = modal.dataset.date;
-            
-            const entries = [];
-            document.querySelectorAll('.entry-item').forEach(item => {
-                const subject = item.querySelector('.subject-input').value;
-                const hours = parseFloat(item.querySelector('.hours-input').value) || 0;
-                const content = item.querySelector('.content-input').value.trim();
-                
-                if (subject && hours > 0 && content) {
-                     entries.push({ subject, hours: parseFloat(hours.toFixed(2)), content });
-                }
-            });
+        const openRecordModal = (dateKey, records, isReadOnly) => {
+            document.getElementById('modal-date').textContent = dateKey;
+            const recordList = document.getElementById('record-list');
+            recordList.innerHTML = '';
+            recordList.dataset.date = dateKey;
+            if (records.length === 0 && !isReadOnly) addRecordItem(recordList);
+            else records.forEach(r => addRecordItem(recordList, r, isReadOnly));
+            document.getElementById('modal-actions').classList.toggle('hidden', isReadOnly);
+            document.getElementById('record-modal-info').classList.toggle('hidden', !isReadOnly);
+            recordModal.classList.add('active');
+        };
 
-            state.studyData[date] = entries;
-            
-            const result = await callApi('saveStudyData', {
-                userId: state.currentUser.id,
-                date: date,
-                content: JSON.stringify(entries) // Save as JSON string
-            });
+        const addRecordItem = (container, item = {subject: SUBJECTS[0], hours: '', content: ''}, isReadOnly = false) => {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'record-item grid grid-cols-1 sm:grid-cols-12 gap-2 mb-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border dark:border-gray-600';
+            const subjectOptions = SUBJECTS.map(s => `<option value="${s}" ${item.subject === s ? 'selected' : ''}>${s}</option>`).join('');
+            itemEl.innerHTML = `
+                <div class="sm:col-span-3"><select class="subject w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" ${isReadOnly ? 'disabled' : ''}>${subjectOptions}</select></div>
+                <div class="sm:col-span-2"><input type="number" step="0.01" class="hours w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" placeholder="時數" value="${item.hours}" ${isReadOnly ? 'disabled' : ''}></div>
+                <div class="sm:col-span-6"><input type="text" class="content w-full p-2 border rounded-md dark:bg-gray-600 dark:border-gray-500" placeholder="溫習內容" value="${item.content}" ${isReadOnly ? 'disabled' : ''}></div>
+                <div class="sm:col-span-1 flex items-center justify-end">${!isReadOnly ? '<button class="delete-item-btn text-red-500 hover:text-red-700 font-bold text-xl">×</button>' : ''}</div>
+            `;
+            if (!isReadOnly) itemEl.querySelector('.delete-item-btn').addEventListener('click', () => itemEl.remove());
+            container.appendChild(itemEl);
+        };
 
-            if (result) {
-                showToast('紀錄已儲存！');
-                renderCalendar(state.currentDate, 'main');
-                modal.classList.add('hidden');
-            } else {
-                 showToast('儲存失敗，請重試。', true);
-            }
-        }
-        
-        function openAdminViewModal(date) {
-            const modal = document.getElementById('admin-view-modal');
-            const dateString = formatDate(date);
-            document.getElementById('admin-view-date-label').textContent = dateString;
-
-            const container = document.getElementById('admin-view-entries-container');
-            container.innerHTML = '';
-            
-            let entries = state.currentStudentData[dateString] || [];
-            // Handle if data is still a plain string from old format
-            if (typeof entries === 'string') {
-                try { entries = JSON.parse(entries); } catch(e) { entries = [{ subject: '綜合', hours: 'N/A', content: entries }]; }
-            }
-            if(!Array.isArray(entries)) { entries = []; }
-
-
-            if (entries.length > 0) {
-                entries.forEach(entry => {
-                    const entryDiv = document.createElement('div');
-                    entryDiv.className = 'bg-gray-700 p-3 rounded-lg mb-2';
-                    entryDiv.innerHTML = `
-                        <p class="font-semibold text-sky-400">${entry.subject} - <span class="text-amber-400">${entry.hours} 小時</span></p>
-                        <p class="text-sm text-gray-300">${entry.content}</p>
-                    `;
-                    container.appendChild(entryDiv);
-                });
-            } else {
-                 container.innerHTML = `<p class="text-gray-500">當天沒有紀錄。</p>`;
-            }
-            
-            modal.classList.remove('hidden');
-        }
-
-        function showStats(mode) {
-            const data = mode === 'main' ? state.studyData : state.currentStudentData;
-            const date = mode === 'main' ? state.currentDate : state.adminCurrentDate;
-            const modal = document.getElementById('stats-modal');
-            const monthLabel = document.getElementById('stats-month-label');
-            const totalHoursLabel = document.getElementById('stats-total-hours');
-            
-            monthLabel.textContent = `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
-
+        const openStatsModal = () => {
+            const year = state.currentDate.getFullYear(), month = state.currentDate.getMonth() + 1;
+            const monthKey = `${year}-${String(month).padStart(2, '0')}`;
             let totalHours = 0;
             const subjectHours = {};
-            subjects.forEach(s => subjectHours[s] = 0);
-
-            Object.entries(data).forEach(([dateStr, entries]) => {
-                const entryDate = new Date(dateStr);
-                if (entryDate.getFullYear() === date.getFullYear() && entryDate.getMonth() === date.getMonth()) {
-                     let parsedEntries = [];
-                     if (typeof entries === 'string') {
-                        try { parsedEntries = JSON.parse(entries); } catch (e) { /* ignore old format */ }
-                     } else if (Array.isArray(entries)) {
-                         parsedEntries = entries;
-                     }
-                    
-                    if (Array.isArray(parsedEntries)) {
-                        parsedEntries.forEach(entry => {
-                            const hours = parseFloat(entry.hours) || 0;
-                            totalHours += hours;
-                            if (subjectHours[entry.subject] !== undefined) {
-                                subjectHours[entry.subject] += hours;
-                            }
-                        });
-                    }
+            Object.keys(state.studentData).forEach(dateKey => {
+                if (dateKey.startsWith(monthKey)) {
+                    JSON.parse(state.studentData[dateKey]).forEach(r => {
+                        const hours = parseFloat(r.hours) || 0;
+                        totalHours += hours;
+                        subjectHours[r.subject] = (subjectHours[r.subject] || 0) + hours;
+                    });
                 }
             });
-
-            totalHoursLabel.textContent = `${totalHours.toFixed(2)} 小時`;
-
+            document.getElementById('total-hours').textContent = totalHours.toFixed(2);
+            document.getElementById('stats-user-id').textContent = state.currentUser.role === 'admin' ? `學生: ${state.viewingStudentId}` : '';
             const chartCanvas = document.getElementById('subject-chart');
-            if (state.chartInstance) {
-                state.chartInstance.destroy();
-            }
-
-            const chartData = {
-                labels: Object.keys(subjectHours).filter(s => subjectHours[s] > 0),
-                datasets: [{
-                    label: '溫習時數',
-                    data: Object.values(subjectHours).filter(h => h > 0),
-                    backgroundColor: [
-                        '#38bdf8', '#fbbf24', '#34d399', '#f87171', '#a78bfa', '#fb923c', '#60a5fa', 
-                        '#f472b6', '#a3e635', '#2dd4bf', '#c084fc', '#f97316', '#818cf8', '#e879f9', '#4ade80'
-                    ],
-                    borderColor: '#4b5563',
-                    borderWidth: 1
-                }]
-            };
-
+            if (state.chartInstance) state.chartInstance.destroy();
+            const isDark = document.documentElement.classList.contains('dark');
+            Chart.defaults.color = isDark ? '#ddd' : '#666';
             state.chartInstance = new Chart(chartCanvas, {
                 type: 'doughnut',
-                data: chartData,
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                color: '#d1d5db',
-                                font: { size: 12 }
-                            }
-                        }
-                    }
-                }
+                data: {
+                    labels: Object.keys(subjectHours),
+                    datasets: [{ data: Object.values(subjectHours), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8BC34A', '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#03A9F4', '#009688', '#CDDC39', '#FFC107'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom' } } }
             });
-
-            modal.classList.remove('hidden');
-        }
-        
-        // --- 輔助函式 ---
-        const showSpinner = () => loadingSpinner.classList.remove('hidden');
-        const hideSpinner = () => loadingSpinner.classList.add('hidden');
-        const isToday = (date) => { const today = new Date(); return date.toDateString() === today.toDateString(); };
-        const formatDate = (date) => {
-            const d = new Date(date);
-            let month = '' + (d.getMonth() + 1);
-            let day = '' + d.getDate();
-            const year = d.getFullYear();
-            if (month.length < 2) month = '0' + month;
-            if (day.length < 2) day = '0' + day;
-            return [year, month, day].join('-');
+            statsModal.classList.add('active');
         };
-        const navigateTo = (pageName) => { Object.values(pages).forEach(p => p.classList.add('hidden')); pages[pageName].classList.remove('hidden'); };
 
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast-notification');
-            const toastMessage = document.getElementById('toast-message');
-            toastMessage.textContent = message;
-            toast.className = `fixed bottom-20 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-lg shadow-lg animate-fade-in ${isError ? 'bg-red-500' : 'bg-green-500'}`;
-            toast.classList.remove('hidden');
-            setTimeout(() => {
-                toast.classList.add('hidden');
-            }, 3000);
+        // --- 登入/登出/管理員邏輯 ---
+        async function login() {
+            const id = loginIdEl.value.trim(), password = loginPasswordEl.value.trim();
+            if (!id || !password) { loginErrorEl.textContent = '請輸入 ID 和密碼'; return; }
+            loginErrorEl.textContent = '';
+            try {
+                const result = await gasService.login(id, password);
+                state.currentUser = { id: result.id, role: result.role };
+                if (result.role === 'student') {
+                    state.viewingStudentId = result.id;
+                    document.getElementById('admin-controls').classList.add('hidden');
+                    document.getElementById('main-title').textContent = '溫習日曆';
+                    await loadStudentData(result.id);
+                } else if (result.role === 'admin') {
+                    document.getElementById('admin-controls').classList.remove('hidden');
+                    document.getElementById('main-title').textContent = '管理員面板';
+                    await setupAdminPage();
+                }
+                showPage('main-page');
+            } catch (error) {
+                loginErrorEl.textContent = error.message;
+            }
         }
 
-        // --- 事件監聽器設定 ---
-        function setupEventListeners() {
-            // Login/Logout
-            document.getElementById('login-btn').addEventListener('click', handleLogin);
-            pwInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') handleLogin(); });
-            document.getElementById('logout-btn').addEventListener('click', handleLogout);
-            document.getElementById('admin-logout-btn').addEventListener('click', handleLogout);
+        async function loadStudentData(studentId) {
+            state.studentData = await gasService.getStudentData(studentId);
+            renderCalendar();
+        }
 
-            // Student Calendar Navigation
-            document.getElementById('prev-month-btn').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() - 1); renderCalendar(state.currentDate, 'main'); });
-            document.getElementById('next-month-btn').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() + 1); renderCalendar(state.currentDate, 'main'); });
-            
-            // Admin Calendar Navigation & Selector
-            document.getElementById('admin-prev-month-btn').addEventListener('click', () => { state.adminCurrentDate.setMonth(state.adminCurrentDate.getMonth() - 1); renderCalendar(state.adminCurrentDate, 'admin'); });
-            document.getElementById('admin-next-month-btn').addEventListener('click', () => { state.adminCurrentDate.setMonth(state.adminCurrentDate.getMonth() + 1); renderCalendar(state.adminCurrentDate, 'admin'); });
-            document.getElementById('student-selector').addEventListener('change', (e) => {
-                state.adminCurrentDate = new Date(); // Reset date when switching students
-                fetchDataForUser(e.target.value);
+        async function setupAdminPage() {
+            const students = await gasService.getAllStudents();
+            const selector = document.getElementById('student-selector');
+            selector.innerHTML = '<option value="">選擇學生</option>';
+            students.forEach(id => {
+                const option = document.createElement('option');
+                option.value = id; option.textContent = id;
+                selector.appendChild(option);
             });
-            
-            // Modals
-            document.getElementById('modal-save-btn').addEventListener('click', handleSaveContent);
-            document.getElementById('modal-cancel-btn').addEventListener('click', () => document.getElementById('edit-modal').classList.add('hidden'));
-            document.getElementById('add-entry-btn').addEventListener('click', () => document.getElementById('modal-entries-container').appendChild(createEntryElement()));
-            document.getElementById('stats-btn').addEventListener('click', () => showStats('main'));
-            document.getElementById('admin-stats-btn').addEventListener('click', () => showStats('admin'));
-            document.getElementById('stats-close-btn').addEventListener('click', () => document.getElementById('stats-modal').classList.add('hidden'));
-            document.getElementById('admin-view-close-btn').addEventListener('click', () => document.getElementById('admin-view-modal').classList.add('hidden'));
+            state.studentData = {};
+            renderCalendar();
         }
 
-        // --- App 初始化 ---
-        function initializeApp() {
-            // DSE Countdown
-            const countdownEl = document.getElementById('dse-countdown');
-            const updateCountdown = () => {
-                const now = new Date();
-                const diffTime = DSE_TARGET_DATE - now;
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                countdownEl.textContent = `距離 HKDSE 尚餘 ${diffDays} 日`;
-            };
-            updateCountdown();
-            setInterval(updateCountdown, 1000 * 60 * 60); // Update every hour
-
-            // Motivational Quote
-            const quoteEl = document.getElementById('motivational-quote');
-            quoteEl.textContent = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-            
-            setupEventListeners();
-            navigateTo('login');
+        function logout() {
+            state = { ...state, currentUser: null, studentData: {}, viewingStudentId: null };
+            loginIdEl.value = ''; loginPasswordEl.value = ''; loginErrorEl.textContent = '';
+            showPage('login-page');
         }
 
-        initializeApp();
+        // --- 主題切換 ---
+        const sunIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>`;
+        const moonIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>`;
+
+        const applyTheme = (theme) => {
+            if (theme === 'dark') {
+                document.documentElement.classList.add('dark');
+                themeToggleButton.innerHTML = sunIcon;
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeToggleButton.innerHTML = moonIcon;
+            }
+        };
+
+        const toggleTheme = () => {
+            const newTheme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+            localStorage.setItem('theme', newTheme);
+            applyTheme(newTheme);
+        };
+        themeToggleButton.addEventListener('click', toggleTheme);
+
+        // --- 事件監聽器 ---
+        loginButton.addEventListener('click', login);
+        loginPasswordEl.addEventListener('keyup', (e) => { if(e.key === 'Enter') login(); });
+        document.getElementById('logout-button').addEventListener('click', logout);
+        document.getElementById('stats-button').addEventListener('click', openStatsModal);
+        document.getElementById('close-stats-modal').addEventListener('click', () => statsModal.classList.remove('active'));
+        document.getElementById('prev-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() - 1); renderCalendar(); });
+        document.getElementById('next-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() + 1); renderCalendar(); });
+        document.getElementById('close-record-modal').addEventListener('click', () => recordModal.classList.remove('active'));
+        document.getElementById('add-record-item').addEventListener('click', () => addRecordItem(document.getElementById('record-list')));
+        document.getElementById('save-records').addEventListener('click', async () => {
+            const recordList = document.getElementById('record-list');
+            const dateKey = recordList.dataset.date;
+            const dataToSave = Array.from(recordList.querySelectorAll('.record-item')).map(item => ({
+                subject: item.querySelector('.subject').value,
+                hours: parseFloat(item.querySelector('.hours').value) || 0,
+                content: item.querySelector('.content').value.trim(),
+            })).filter(item => item.content || item.hours > 0);
+            await gasService.saveStudentData(state.viewingStudentId, dateKey, JSON.stringify(dataToSave));
+            await loadStudentData(state.viewingStudentId);
+            recordModal.classList.remove('active');
+        });
+        document.getElementById('student-selector').addEventListener('change', async (e) => {
+            const studentId = e.target.value;
+            if (studentId) {
+                state.viewingStudentId = studentId;
+                await loadStudentData(studentId);
+            } else {
+                state.viewingStudentId = null;
+                state.studentData = {};
+                renderCalendar();
+            }
+        });
+
+        // --- 初始化 ---
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+        const manifest = {"name":"YY3 STEAM HKDSE 衝刺計劃","short_name":"DSE衝刺","description":"一個為 HKDSE 考生設計的溫習進度追蹤工具","start_url":".","display":"standalone","background_color":"#f7fafc","theme_color":"#4299e1","orientation":"portrait-primary","icons":[{"src":"https://placehold.co/192x192/4a90e2/ffffff?text=YY3","type":"image/png","sizes":"192x192"},{"src":"https://placehold.co/512x512/4a90e2/ffffff?text=YY3","type":"image/png","sizes":"512x512"}]};
+        const manifestBlob = new Blob([JSON.stringify(manifest)], {type: 'application/json'});
+        document.getElementById('manifest-link').href = URL.createObjectURL(manifestBlob);
+
+        quoteEl.textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+        setInterval(updateCountdown, 1000);
+        updateCountdown();
     });
-</script>
+    </script>
 </body>
 </html>
-
 
