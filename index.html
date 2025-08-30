@@ -34,8 +34,13 @@
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
             -webkit-tap-highlight-color: transparent; /* 移除行動裝置點擊高亮 */
         }
-        .page { display: none; }
-        .page.active { display: block; animation: fadeIn 0.5s ease-in-out; }
+        .page { 
+            display: none; /* 所有頁面預設隱藏 */
+        }
+        .page.active { 
+            /* 啟動的頁面只負責動畫，顯示方式由 JS 控制 */
+            animation: fadeIn 0.5s ease-in-out; 
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         .modal-backdrop {
@@ -222,7 +227,8 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- 設定 ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx5WgyWltWhRIaxAM23k6XUJ2obGMwIy14XxUkrFBXzl2IpPuGt3dKx4AzrY7WyewOkyQ/exec';
+        // !!! 極度重要 !!! 請將此處替換為你部署後的 Google Apps Script Web App 網址
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbztY_g-BDWK4v-YNwaeYZv3sPazESn9ryjU5XUn8hFtzFDHeo8KVmQ-3Ja9gelh5p_bLQ/exec';
 
         // --- 全局變數和常數 ---
         const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
@@ -253,7 +259,7 @@
         // --- 後端服務 ---
         const callGas = async (action, payload = {}) => {
             if (GAS_URL.includes('在此貼上')) {
-                alert('錯誤：尚未設定 Google Apps Script Web App 網址！請在 index.html 檔案中設定 GAS_URL 變數。');
+                alert('錯誤：尚未設定 Google Apps Script Web App 網址！請在 index.html 檔案中找到 GAS_URL 變數，並貼上你的後端網址。');
                 throw new Error('GAS_URL not configured.');
             }
             loader.classList.add('active');
@@ -282,9 +288,22 @@
         };
 
         // --- 核心函式 ---
+        
+        // *** 佈局修正 ***
+        // 這個函式現在會根據頁面 ID 設定正確的 display 樣式
         const showPage = (pageId) => {
-            pages.forEach(p => p.classList.remove('active'));
-            document.getElementById(pageId).classList.add('active');
+            pages.forEach(p => {
+                p.classList.remove('active');
+                p.style.display = 'none'; // 先全部隱藏
+            });
+            const activePage = document.getElementById(pageId);
+            activePage.classList.add('active');
+            // 根據頁面 ID，設定其應有的 display 屬性
+            if (pageId === 'main-page') {
+                activePage.style.display = 'flex'; // 主頁面是 flex 佈局
+            } else {
+                activePage.style.display = 'block'; // 登入頁是 block 佈局
+            }
         };
 
         const updateCountdown = () => {
@@ -376,7 +395,6 @@
             document.getElementById('total-hours').textContent = totalHours.toFixed(2);
             document.getElementById('stats-user-id').textContent = state.currentUser.role === 'admin' ? `學生: ${state.viewingStudentId}` : '';
             
-            // 更新統計列表
             const statsDetailsList = document.getElementById('stats-details-list');
             statsDetailsList.innerHTML = '';
             if (totalHours > 0) {
@@ -395,7 +413,6 @@
                 statsDetailsList.innerHTML = '<p class="text-center text-gray-500">本月暫無紀錄</p>';
             }
 
-            // 更新圖表
             if (state.chartInstance) state.chartInstance.destroy();
             Chart.defaults.color = document.documentElement.classList.contains('dark') ? '#ddd' : '#666';
             state.chartInstance = new Chart(document.getElementById('subject-chart'), {
@@ -437,14 +454,17 @@
         async function setupAdminPage() {
             const students = await gasService.getAllStudents();
             const selector = document.getElementById('student-selector');
-            selector.innerHTML = '<option value="">選擇學生</option>';
+selector.innerHTML = '<option value="">選擇學生</option>';
             students.forEach(id => selector.add(new Option(id, id)));
-            state.studentData = {}; renderCalendar();
+            state.studentData = {}; 
+            renderCalendar();
         }
 
         function logout() {
             state = { ...state, currentUser: null, studentData: {}, viewingStudentId: null };
-            loginIdEl.value = ''; loginPasswordEl.value = ''; loginErrorEl.textContent = '';
+            loginIdEl.value = ''; 
+            loginPasswordEl.value = ''; 
+            loginErrorEl.textContent = '';
             showPage('login-page');
         }
 
@@ -512,6 +532,9 @@
         quoteEl.textContent = `“${QUOTES[Math.floor(Math.random() * QUOTES.length)]}”`;
         setInterval(updateCountdown, 3600000); // Update countdown every hour is enough
         updateCountdown();
+        
+        // 初始顯示登入頁
+        showPage('login-page');
     });
     </script>
 </body>
