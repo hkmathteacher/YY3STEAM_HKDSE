@@ -101,13 +101,16 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 簡化輸入框樣式 */
-        .record-item input, .record-item select {
-            background-color: transparent !important;
+        /* 紀錄 Modal 輸入框的統一風格 */
+        .record-input {
             border: none !important;
             box-shadow: none !important;
             outline: none !important;
             --tw-ring-shadow: none !important;
+            background-color: rgb(243 244 246) !important;
+        }
+        html.dark .record-input {
+            background-color: rgb(55 65 81) !important;
         }
     </style>
 </head>
@@ -117,10 +120,10 @@
     <div id="loader"><div class="spinner"></div></div>
 
     <!-- 主容器 -->
-    <div id="app" class="max-w-4xl mx-auto min-h-screen bg-white dark:bg-gray-800 shadow-lg">
+    <div id="app" class="max-w-4xl mx-auto min-h-screen bg-white dark:bg-gray-800">
 
         <!-- 登入頁面 -->
-        <div id="login-page" class="page active">
+        <div id="login-page" class="page">
             <div class="min-h-screen flex flex-col bg-white dark:bg-gray-900 p-6">
                 <header class="flex justify-between items-center mb-16">
                     <div>
@@ -159,20 +162,22 @@
         </div>
 
         <!-- 學生/管理員主頁面 (自適應高度佈局) -->
-        <div id="main-page" class="page flex flex-col h-screen">
-            <header class="bg-blue-600 dark:bg-blue-900 text-white p-4 flex justify-between items-center sticky top-0 z-10 shadow-md flex-shrink-0">
-                <div id="header-left">
+        <div id="main-page" class="page flex-col h-screen">
+            <header class="px-4 py-3 flex justify-between items-center sticky top-0 z-10 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
+                <div id="header-left" class="flex items-center gap-2">
                     <h1 id="main-title" class="text-xl font-bold">溫習日曆</h1>
-                    <div id="admin-controls" class="hidden mt-2">
-                        <select id="student-selector" class="bg-blue-700 dark:bg-blue-800 text-white border border-blue-400 dark:border-blue-600 rounded-md py-1 px-2 text-sm">
+                    <div id="admin-controls" class="hidden">
+                        <select id="student-selector" class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md py-1 px-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">選擇學生</option>
                         </select>
                     </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <button id="main-theme-toggle" class="p-2 rounded-full hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors"></button>
-                    <button id="stats-button" class="bg-white text-blue-600 dark:bg-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg shadow hover:bg-gray-200 dark:hover:bg-gray-600 transition">統計</button>
-                    <button id="logout-button" class="bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow hover:bg-red-600 transition">登出</button>
+                <div class="flex items-center space-x-1">
+                    <button id="stats-button" title="統計" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>
+                    </button>
+                    <button id="main-theme-toggle" title="切換主題" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"></button>
+                    <button id="logout-button" class="font-semibold text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-500 transition px-3 py-2 text-sm">登出</button>
                 </div>
             </header>
 
@@ -191,21 +196,21 @@
         </div>
     </div>
 
-    <!-- 溫習紀錄 Modal -->
+    <!-- 溫習紀錄 Modal (統一視覺風格) -->
     <div id="record-modal" class="modal-backdrop">
         <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
-            <h3 id="modal-date" class="text-2xl font-bold mb-4 text-center"></h3>
-            <div id="record-list" class="flex-grow overflow-y-auto"></div>
-            <div id="modal-actions" class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-2">
-                 <button id="add-record-item" class="w-full sm:w-auto flex-grow bg-green-500 text-white py-2 px-4 rounded-lg hover:bg-green-600 transition">新增項目</button>
+            <h3 id="modal-date" class="text-2xl font-bold mb-6 text-center"></h3>
+            <div id="record-list" class="flex-grow overflow-y-auto pr-2"></div>
+            <div id="modal-actions" class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-4">
+                 <button id="add-record-item" class="w-full sm:w-auto flex-grow bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition font-semibold">新增項目</button>
                  <div class="w-full sm:w-auto flex flex-grow space-x-2">
-                    <button id="save-records" class="w-1/2 flex-grow bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition">儲存</button>
-                    <button id="close-record-modal" class="w-1/2 flex-grow bg-gray-400 dark:bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500 transition">關閉</button>
+                    <button id="save-records" class="w-1/2 flex-grow bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition font-semibold">儲存</button>
+                    <button id="close-record-modal" class="w-1/2 flex-grow bg-gray-500 dark:bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition font-semibold">關閉</button>
                  </div>
             </div>
             <div id="admin-modal-footer" class="mt-6 text-center hidden">
                 <p id="record-modal-info" class="text-center text-gray-500 mb-4">管理員唯讀模式</p>
-                <button id="close-admin-record-modal" class="w-full bg-gray-400 dark:bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500 transition">關閉</button>
+                <button id="close-admin-record-modal" class="w-full bg-gray-500 dark:bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition font-semibold">關閉</button>
             </div>
         </div>
     </div>
@@ -213,13 +218,13 @@
     <!-- 統計 Modal -->
     <div id="stats-modal" class="modal-backdrop">
         <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
-            <h3 class="text-2xl font-bold mb-2 text-center">當月溫習統計</h3>
+            <h3 id="stats-modal-title" class="text-2xl font-bold mb-2 text-center"></h3>
             <p id="stats-user-id" class="text-center text-gray-500 dark:text-gray-400 mb-4"></p>
             <p class="text-center text-lg mb-4">總時數: <span id="total-hours" class="font-bold text-blue-600 dark:text-blue-400">0</span> 小時</p>
             <div class="w-full max-w-xs mx-auto flex-shrink-0"><canvas id="subject-chart"></canvas></div>
-            <div id="stats-details-list" class="mt-6 text-left flex-grow overflow-y-auto"></div>
+            <div id="stats-details-list" class="mt-6 text-left flex-grow overflow-y-auto pr-2"></div>
             <div class="mt-6 text-center flex-shrink-0">
-                <button id="close-stats-modal" class="bg-gray-400 dark:bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-500 dark:hover:bg-gray-500 transition">關閉</button>
+                <button id="close-stats-modal" class="bg-gray-500 dark:bg-gray-600 text-white py-2 px-6 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition font-semibold">關閉</button>
             </div>
         </div>
     </div>
@@ -227,8 +232,7 @@
     <script>
     document.addEventListener('DOMContentLoaded', () => {
         // --- 設定 ---
-        // !!! 極度重要 !!! 請將此處替換為你部署後的 Google Apps Script Web App 網址
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbztY_g-BDWK4v-YNwaeYZv3sPazESn9ryjU5XUn8hFtzFDHeo8KVmQ-3Ja9gelh5p_bLQ/exec';
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycby2vU5JkB4zhmMU5pMdQ8QjnAoqTwQ7iaXKK5OFlBX0UIr0brrevZ7nUeQriiy_eMgd2g/exec';
 
         // --- 全局變數和常數 ---
         const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
@@ -288,21 +292,17 @@
         };
 
         // --- 核心函式 ---
-        
-        // *** 佈局修正 ***
-        // 這個函式現在會根據頁面 ID 設定正確的 display 樣式
         const showPage = (pageId) => {
             pages.forEach(p => {
                 p.classList.remove('active');
-                p.style.display = 'none'; // 先全部隱藏
+                p.style.display = 'none'; 
             });
             const activePage = document.getElementById(pageId);
             activePage.classList.add('active');
-            // 根據頁面 ID，設定其應有的 display 屬性
             if (pageId === 'main-page') {
-                activePage.style.display = 'flex'; // 主頁面是 flex 佈局
+                activePage.style.display = 'flex'; 
             } else {
-                activePage.style.display = 'block'; // 登入頁是 block 佈局
+                activePage.style.display = 'block';
             }
         };
 
@@ -320,7 +320,7 @@
             currentMonthYearEl.textContent = `${year}年 ${month + 1}月`;
             const firstDay = new Date(year, month, 1).getDay();
             const daysInMonth = new Date(year, month + 1, 0).getDate();
-            for (let i = 0; i < firstDay; i++) calendarBodyEl.innerHTML += `<div></div>`; // 佔位
+            for (let i = 0; i < firstDay; i++) calendarBodyEl.innerHTML += `<div></div>`;
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const today = new Date();
@@ -365,13 +365,17 @@
 
         const addRecordItem = (container, item = {subject: SUBJECTS[0], hours: '', content: ''}, isReadOnly = false) => {
             const itemEl = document.createElement('div');
-            itemEl.className = 'record-item flex flex-wrap items-center gap-x-2 gap-y-1 py-3 border-b dark:border-gray-600';
+            itemEl.className = 'record-item flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4';
             const subjectOptions = SUBJECTS.map(s => `<option value="${s}" ${item.subject === s ? 'selected' : ''}>${s}</option>`).join('');
             itemEl.innerHTML = `
-                <select class="subject p-1 rounded-md dark:text-gray-200 w-24" ${isReadOnly ? 'disabled' : ''}>${subjectOptions}</select>
-                <input type="number" step="0.01" class="hours p-1 rounded-md dark:text-gray-200 w-20" placeholder="時數" value="${item.hours}" ${isReadOnly ? 'disabled' : ''}>
-                <input type="text" class="content p-1 rounded-md dark:text-gray-200 flex-grow min-w-[100px]" placeholder="溫習內容" value="${item.content}" ${isReadOnly ? 'disabled' : ''}>
-                <div class="flex-shrink-0">${!isReadOnly ? '<button class="delete-item-btn text-red-500 hover:text-red-700 font-bold text-xl px-2">×</button>' : ''}</div>
+                <div class="flex items-center gap-2 flex-grow">
+                    <select class="subject p-3 rounded-lg dark:text-gray-200 w-28 record-input" ${isReadOnly ? 'disabled' : ''}>${subjectOptions}</select>
+                    <input type="number" step="0.01" class="hours p-3 rounded-lg dark:text-gray-200 w-24 record-input" placeholder="時數" value="${item.hours}" ${isReadOnly ? 'disabled' : ''}>
+                    <input type="text" class="content p-3 rounded-lg dark:text-gray-200 flex-grow record-input" placeholder="溫習內容" value="${item.content}" ${isReadOnly ? 'disabled' : ''}>
+                </div>
+                <div class="flex-shrink-0 flex items-center justify-end">
+                    ${!isReadOnly ? '<button class="delete-item-btn text-red-500 hover:text-red-700 font-bold text-2xl px-2 h-full flex items-center">×</button>' : ''}
+                </div>
             `;
             if (!isReadOnly) itemEl.querySelector('.delete-item-btn').addEventListener('click', () => itemEl.remove());
             container.appendChild(itemEl);
@@ -379,16 +383,22 @@
 
         const openStatsModal = () => {
             const year = state.currentDate.getFullYear(), month = state.currentDate.getMonth() + 1;
+            document.getElementById('stats-modal-title').textContent = `${year}年 ${month}月 溫習統計`;
+
             const monthKey = `${year}-${String(month).padStart(2, '0')}`;
             let totalHours = 0;
             const subjectHours = {};
             Object.keys(state.studentData).forEach(dateKey => {
-                if (dateKey.startsWith(monthKey)) {
-                    JSON.parse(state.studentData[dateKey]).forEach(r => {
-                        const hours = parseFloat(r.hours) || 0;
-                        totalHours += hours;
-                        subjectHours[r.subject] = (subjectHours[r.subject] || 0) + hours;
-                    });
+                if (dateKey.startsWith(monthKey) && state.studentData[dateKey]) {
+                    try {
+                        JSON.parse(state.studentData[dateKey]).forEach(r => {
+                            const hours = parseFloat(r.hours) || 0;
+                            totalHours += hours;
+                            subjectHours[r.subject] = (subjectHours[r.subject] || 0) + hours;
+                        });
+                    } catch (e) {
+                        console.error("無法解析統計數據:", state.studentData[dateKey]);
+                    }
                 }
             });
 
@@ -450,11 +460,14 @@
             }
         }
 
-        async function loadStudentData(studentId) { state.studentData = await gasService.getStudentData(studentId); renderCalendar(); }
+        async function loadStudentData(studentId) { 
+            state.studentData = await gasService.getStudentData(studentId); 
+            renderCalendar(); 
+        }
         async function setupAdminPage() {
             const students = await gasService.getAllStudents();
             const selector = document.getElementById('student-selector');
-selector.innerHTML = '<option value="">選擇學生</option>';
+            selector.innerHTML = '<option value="">選擇學生</option>';
             students.forEach(id => selector.add(new Option(id, id)));
             state.studentData = {}; 
             renderCalendar();
