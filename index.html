@@ -1,177 +1,220 @@
 <!DOCTYPE html>
-<html lang="zh-Hant" class="">
+<html lang="zh-Hant" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>YY3 STEAM HKDSE 衝刺計劃</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- PWA Manifest & Meta Tags for Native App Feel -->
-    <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;YY3 STEAM HKDSE 衝刺計劃&quot;,&quot;short_name&quot;:&quot;DSE衝刺&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;#111827&quot;,&quot;theme_color&quot;:&quot;#4f46e5&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;https://placehold.co/192x192/4f46e5/ffffff?text=DSE&quot;,&quot;sizes&quot;:&quot;192x192&quot;,&quot;type&quot;:&quot;image/png&quot;},{&quot;src&quot;:&quot;https://placehold.co/512x512/4f46e5/ffffff?text=DSE&quot;,&quot;sizes&quot;:&quot;512x512&quot;,&quot;type&quot;:&quot;image/png&quot;}]}">
+    <!-- PWA Manifest and Icons -->
+    <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="DSE衝刺">
-    <link rel="apple-touch-icon" href="https://placehold.co/180x180/4f46e5/ffffff?text=DSE">
-    
+    <meta name="apple-mobile-web-app-title" content="DSE Tracker">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/1f2937/ffffff?text=DSE">
     <style>
-        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
-        html, body { height: 100%; overflow: hidden; }
-        #app-container { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
-        main { flex-grow: 1; overflow-y: auto; }
-        .calendar-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-        .day-cell { position: relative; padding-bottom: 100%; }
-        .day-content { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f5f9; }
-        .dark ::-webkit-scrollbar-track { background: #1f2937; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        .dark ::-webkit-scrollbar-thumb { background: #4b5563; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+        .modal-content { animation: slideUp 0.3s ease-out forwards; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .toast-show { animation: fadeInOut 3s ease-in-out forwards; }
+        @keyframes fadeInOut { 0%, 100% { opacity: 0; transform: translateY(20px); } 10%, 90% { opacity: 1; transform: translateY(0); } }
     </style>
     <script>
-        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: { '50': '#eff6ff', '100': '#dbeafe', '200': '#bfdbfe', '300': '#93c5fd', '400': '#60a5fa', '500': '#3b82f6', '600': '#2563eb', '700': '#1d4ed8', '800': '#1e40af', '900': '#1e3a8a', '950': '#172554' } } } } }
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: {} }
+        }
     </script>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 antialiased">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 flex items-center justify-center min-h-screen overflow-hidden">
 
-    <!-- App Container -->
-    <div id="app-container" class="max-w-lg mx-auto bg-white dark:bg-gray-800 shadow-lg">
-        <!-- All Page HTML remains the same -->
-        <!-- ===== Login Page ===== -->
-        <div id="login-page" class="flex flex-col h-full">
-            <header class="flex justify-between items-center p-6 pb-2">
-                <div>
-                    <p class="text-lg font-medium leading-tight text-primary-600 dark:text-primary-400">YY3 STEAM</p>
-                    <h1 class="text-2xl font-bold leading-tight text-gray-800 dark:text-gray-200">HKDSE 衝刺計劃</h1>
-                </div>
-                <button id="theme-toggle-login" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500">
-                    <svg id="theme-icon-login" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg>
-                </button>
-            </header>
-            <main class="flex-grow flex flex-col justify-center p-6">
-                <div class="text-center mb-8">
-                    <p class="text-lg">距離HKDSE尚餘</p>
-                    <p id="countdown-days" class="text-5xl font-bold text-primary-500 my-2">--</p>
-                    <p class="text-lg">日</p>
-                </div>
-                <div class="space-y-6">
-                    <div>
-                        <label for="userId" class="block text-sm font-medium text-gray-700 dark:text-gray-300">帳號 ID</label>
-                        <input type="text" id="userId" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500">
-                    </div>
-                    <div>
-                        <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">密碼</label>
-                        <input type="password" id="password" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500">
-                    </div>
-                    <button id="login-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 dark:ring-offset-gray-800">登入</button>
-                </div>
-                 <p id="login-error" class="mt-4 text-center text-sm text-red-500"></p>
-                 <div class="mt-8 text-center text-gray-500 dark:text-gray-400 italic">
-                    <p id="quote-text">"</p>
-                 </div>
-            </main>
+    <div id="app-container" class="w-full h-full max-w-md mx-auto bg-white dark:bg-gray-800 shadow-lg flex flex-col relative overflow-hidden" style="min-height: 100vh;">
+
+        <!-- Login Page -->
+        <div id="login-page" class="flex flex-col h-full justify-center items-center p-8 text-center">
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-indigo-600 dark:text-indigo-400">YY3 STEAM</h1>
+                <h2 class="text-xl font-semibold text-gray-700 dark:text-gray-300">HKDSE 衝刺計劃</h2>
+            </div>
+            <div id="dse-countdown" class="mb-6 text-lg">
+                <p class="font-semibold text-gray-600 dark:text-gray-400">距離 HKDSE 尚餘</p>
+                <p id="countdown-timer" class="text-4xl font-bold text-indigo-500"></p>
+            </div>
+            <div id="quote-container" class="mb-6 h-20 flex items-center justify-center p-2 border-t border-b border-gray-200 dark:border-gray-700">
+                <p id="daily-quote" class="text-sm italic text-gray-500 dark:text-gray-400"></p>
+            </div>
+            <input id="user-id" type="text" placeholder="使用者ID" class="w-full mb-4 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 focus:ring-0 outline-none transition">
+            <input id="user-pw" type="password" placeholder="密碼" class="w-full mb-6 p-3 rounded-lg bg-gray-100 dark:bg-gray-700 border-2 border-transparent focus:border-indigo-500 focus:ring-0 outline-none transition">
+            <button id="login-btn" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition duration-300 shadow-lg">登入</button>
+            <p class="absolute bottom-4 right-4 text-xs text-gray-400 dark:text-gray-500">Lonely Chan & AI 共同開發</p>
         </div>
-        <!-- ===== Main (Calendar) Page ===== -->
+
+        <!-- Main Page -->
         <div id="main-page" class="hidden flex-col h-full">
-            <header class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                     <h2 id="current-user-id" class="text-lg font-semibold"></h2>
+            <header class="p-4 bg-white dark:bg-gray-800 shadow-md flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                <div id="month-navigation">
+                    <button id="prev-month-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">&lt;</button>
+                    <span id="current-month-year" class="font-bold text-lg mx-4"></span>
+                    <button id="next-month-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">&gt;</button>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button id="stats-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" title="查看統計"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></button>
-                    <button id="theme-toggle-main" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" title="切換主題"><svg id="theme-icon-main" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg></button>
-                    <button id="logout-btn" class="text-sm font-medium text-red-600 dark:text-red-400 hover:underline">登出</button>
+                <div>
+                    <button id="stats-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">📊</button>
+                    <button id="logout-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">登出</button>
                 </div>
             </header>
-            <main class="flex-grow flex flex-col p-2 sm:p-4 overflow-y-auto">
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button id="prev-month" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-                    <h3 id="calendar-header" class="text-lg font-semibold"></h3>
-                    <button id="next-month" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
-                </div>
-                <div class="grid calendar-grid text-center font-semibold text-xs text-gray-600 dark:text-gray-400 mb-2 flex-shrink-0">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
-                </div>
-                <div id="calendar-grid" class="grid calendar-grid gap-1 flex-grow"></div>
-            </main>
+            <div id="calendar-header" class="calendar-grid p-2 text-center text-xs text-gray-500 dark:text-gray-400 font-bold border-b border-gray-200 dark:border-gray-700">
+                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div id="calendar-body" class="calendar-grid flex-grow p-2 gap-1"></div>
+            <footer class="text-center p-2 text-xs text-gray-400 dark:text-gray-500">
+                <p id="current-user-id" class="font-mono"></p>
+                <p class="absolute bottom-4 right-4 text-xs text-gray-400 dark:text-gray-500">Lonely Chan & AI 共同開發</p>
+            </footer>
         </div>
-        <!-- ===== Admin Page ===== -->
+
+        <!-- Admin Page -->
         <div id="admin-page" class="hidden flex-col h-full">
-             <header class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-                <div class="flex items-center gap-4">
-                    <h2 class="text-lg font-semibold">管理員面板</h2>
-                    <select id="student-selector" class="text-sm rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 focus:ring-primary-500 focus:border-primary-500"></select>
-                </div>
-                <div class="flex items-center gap-2">
-                     <button id="admin-stats-btn" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" title="查看學生統計"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg></button>
-                     <button id="theme-toggle-admin" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500" title="切換主題"><svg id="theme-icon-admin" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"></svg></button>
-                    <button id="logout-btn-admin" class="text-sm font-medium text-red-600 dark:text-red-400 hover:underline">登出</button>
+            <header class="p-4 bg-white dark:bg-gray-800 shadow-md flex justify-between items-center border-b border-gray-200 dark:border-gray-700">
+                <select id="student-selector" class="bg-gray-100 dark:bg-gray-700 p-2 rounded-lg"></select>
+                <div>
+                     <button id="admin-stats-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">📊</button>
+                    <button id="admin-logout-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">登出</button>
                 </div>
             </header>
-            <main class="flex-grow flex flex-col p-2 sm:p-4 overflow-y-auto">
-                <div class="flex items-center justify-between mb-4 flex-shrink-0">
-                    <button id="admin-prev-month" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-                    <h3 id="admin-calendar-header" class="text-lg font-semibold"></h3>
-                    <button id="admin-next-month" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+            <div class="p-4">
+                <div id="admin-month-navigation">
+                    <button id="admin-prev-month-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">&lt;</button>
+                    <span id="admin-current-month-year" class="font-bold text-lg mx-4"></span>
+                    <button id="admin-next-month-btn" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">&gt;</button>
                 </div>
-                <div class="grid calendar-grid text-center font-semibold text-xs text-gray-600 dark:text-gray-400 mb-2 flex-shrink-0">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div id="admin-calendar-header" class="calendar-grid p-2 text-center text-xs text-gray-500 dark:text-gray-400 font-bold border-b border-gray-200 dark:border-gray-700">
+                 <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div id="admin-calendar-body" class="calendar-grid flex-grow p-2 gap-1"></div>
+             <footer class="p-2 text-center text-xs text-gray-400 dark:text-gray-500">
+                <p class="absolute bottom-4 right-4 text-xs text-gray-400 dark:text-gray-500">Lonely Chan & AI 共同開發</p>
+            </footer>
+        </div>
+
+        <!-- Modals -->
+        <div id="edit-modal" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-end justify-center">
+            <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-md p-4 rounded-t-2xl shadow-lg flex-col">
+                <h3 id="modal-date" class="font-bold text-lg mb-4 text-center"></h3>
+                <div id="entries-container" class="max-h-60 overflow-y-auto pr-2 mb-4"></div>
+                <button id="add-entry-btn" class="w-full mb-4 p-2 bg-gray-200 dark:bg-gray-700 text-sm rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">+ 新增溫習項目</button>
+                <div class="flex gap-4">
+                    <button id="modal-close-btn" class="w-full bg-gray-500 text-white p-3 rounded-lg font-bold hover:bg-gray-600 transition">關閉</button>
+                    <button id="modal-save-btn" class="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition">儲存</button>
                 </div>
-                <div id="admin-calendar-grid" class="grid calendar-grid gap-1 flex-grow"></div>
-            </main>
-        </div>
-        <!-- ===== Modals ===== -->
-        <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-40">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
-                <div class="flex justify-between items-center p-4 border-b dark:border-gray-700"><h3 id="modal-date" class="text-lg font-semibold"></h3><button id="close-modal-btn" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
-                <div id="modal-body" class="p-4 space-y-4 overflow-y-auto"></div>
-                <div class="p-4 border-t dark:border-gray-700"><button id="add-entry-btn" class="w-full flex justify-center items-center gap-2 py-2 px-4 border border-dashed border-primary-500 rounded-md text-sm font-medium text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/50"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>新增項目</button></div>
-                <div class="p-4 flex justify-end gap-2 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 rounded-b-lg"><button id="delete-content-btn" class="py-2 px-4 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700">清空本日</button><button id="save-content-btn" class="py-2 px-4 rounded-md text-sm font-medium text-white bg-primary-600 hover:bg-primary-700">儲存</button></div>
             </div>
         </div>
-        <div id="stats-modal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-40">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
-                 <div class="flex justify-between items-center p-4 border-b dark:border-gray-700"><h3 id="stats-modal-title" class="text-lg font-semibold">溫習時數統計</h3><button id="close-stats-modal-btn" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
-                <div id="stats-body" class="p-6 space-y-4 overflow-y-auto"></div>
+        
+        <div id="stats-modal" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-2xl shadow-lg">
+                <h3 id="stats-title" class="font-bold text-lg mb-4 text-center">溫習時數統計</h3>
+                <p class="text-center text-3xl font-bold mb-2 text-indigo-500"><span id="total-hours">0.00</span> 小時</p>
+                <p id="stats-month" class="text-center text-sm text-gray-500 dark:text-gray-400 mb-6"></p>
+                <div id="subject-stats-container" class="space-y-2 max-h-60 overflow-y-auto"></div>
+                <button id="stats-close-btn" class="mt-6 w-full bg-gray-500 text-white p-3 rounded-lg font-bold hover:bg-gray-600 transition">關閉</button>
             </div>
         </div>
-        <div id="admin-view-modal" class="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 hidden z-40">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md flex flex-col max-h-[90vh]">
-                 <div class="flex justify-between items-center p-4 border-b dark:border-gray-700"><h3 id="admin-view-modal-date" class="text-lg font-semibold"></h3><button id="close-admin-view-modal-btn" class="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button></div>
-                <div id="admin-view-modal-body" class="p-6 space-y-4 overflow-y-auto"></div>
+
+        <div id="admin-view-modal" class="hidden absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 w-full max-w-md p-6 rounded-2xl shadow-lg">
+                <h3 id="admin-view-title" class="font-bold text-lg mb-4 text-center"></h3>
+                <div id="admin-view-entries-container" class="space-y-3 max-h-72 overflow-y-auto"></div>
+                <button id="admin-view-close-btn" class="mt-6 w-full bg-gray-500 text-white p-3 rounded-lg font-bold hover:bg-gray-600 transition">關閉</button>
             </div>
         </div>
-        <!-- ===== Loading Spinner ===== -->
-        <div id="loading-spinner" class="fixed inset-0 bg-black bg-opacity-25 dark:bg-opacity-50 flex items-center justify-center hidden z-50">
-            <div class="w-12 h-12 border-4 border-t-transparent border-primary-500 rounded-full animate-spin"></div>
+
+        <!-- Global Components -->
+        <div id="loading-spinner" class="hidden absolute inset-0 bg-black bg-opacity-25 flex items-center justify-center">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-indigo-500"></div>
         </div>
-        <!-- Author Footer -->
-        <footer class="fixed bottom-0 right-0 p-2 text-xs text-gray-400 dark:text-gray-500">
-            <p>Lonely Chan & AI 共同開發</p>
-        </footer>
+        <div id="toast-notification" class="hidden fixed bottom-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white py-2 px-5 rounded-lg shadow-xl">
+            <p id="toast-message"></p>
+        </div>
     </div>
 
-    <script>
-    // ***************************************************************
-    // ****** 在此處填入您部署後的 Web App URL        ******
-    // ***************************************************************
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbz1fJFtOI5BLvy9QZ0ivEl97nu0SQ1p2mcU16XKJHZIbXr3HG3wOKWwkMjKSStEb721/exec'; // <--- 請替換成您的 URL
+<script>
+// ===============================================================
+// ===             請在此處填入您的 API Script URL             ===
+// ===============================================================
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzuK6eesYOdiW9UssX_ZsP0LSGrb8_BW7XwN0Jyu_LUzwtTz2FzZXF3BJHKcp6QG6pb/exec';
+// ===============================================================
 
-    // --- App Constants and State (no changes) ---
-    const DSE_TARGET_DATE = new Date('2026-04-09T00:00:00');
-    const QUOTES = ["成功的秘訣在於恆心。", "今日的努力，是明日的榮耀。", "放棄可以找到一萬個理由，堅持只需一個信念。", "知識改變命運，努力照亮未來。", "天道酬勤，功不唐捐。", "每一次的付出，都會在未來某個時刻回報你。", "別讓今日的懶惰，成為明日的遺憾。"];
-    const SPECIAL_DATES = { "2026-04-08": "視覺藝術", "2026-04-09": "中文(一,二)", "2026-04-10": "英文(一,二)", "2026-04-11": "英文(三)", "2026-04-13": "數學(必修)", "2026-04-14": "公民科", "2026-04-16": "化學", "2026-04-20": "生物", "2026-04-22": "物理", "2026-04-23": "地理", "2026-04-24": "ICT", "2026-04-25": "歷史", "2026-04-27": "BAFS", "2026-04-29": "中史", "2026-04-30": "數學(M1/M2)", "2026-05-02": "旅遊與款待", "2026-05-04": "經濟" };
-    const SUBJECTS = ['中文', '英文', '數學', '公社', '物理', '化學', '生物', 'M2', '中史', '西史', '地理', '經濟', '旅款', '企會財', 'ICT', '其他'];
-    const state = { currentUser: null, currentDate: new Date(), studyData: {}, admin: { students: [], selectedStudent: null, currentDate: new Date(), studentData: {} } };
-    const pages = { login: document.getElementById('login-page'), main: document.getElementById('main-page'), admin: document.getElementById('admin-page') };
+
+// --- Main Application Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM Elements
+    const pages = {
+        login: document.getElementById('login-page'),
+        main: document.getElementById('main-page'),
+        admin: document.getElementById('admin-page')
+    };
     const loadingSpinner = document.getElementById('loading-spinner');
-    const editModal = document.getElementById('edit-modal');
-    const statsModal = document.getElementById('stats-modal');
-    const adminViewModal = document.getElementById('admin-view-modal');
-    // --- Utility Functions (no changes) ---
+    const toast = {
+        element: document.getElementById('toast-notification'),
+        message: document.getElementById('toast-message'),
+        show: function (msg) {
+            this.message.textContent = msg;
+            this.element.classList.remove('hidden');
+            this.element.classList.add('toast-show');
+            setTimeout(() => {
+                this.element.classList.remove('toast-show');
+                this.element.classList.add('hidden');
+            }, 3000);
+        }
+    };
+
+    // State Management
+    const state = {
+        currentUser: null,
+        currentDate: new Date(),
+        adminSelectedUser: null,
+        adminCurrentDate: new Date(),
+        studyData: {},
+        allStudentIds: []
+    };
+    
+    // Constants
+    const SUBJECTS = ['中文', '英文', '數學', '公社', '物理', '化學', '生物', 'M2', '中史', '西史', '地理', '經濟', '旅款', '企會財', 'ICT'];
+    const DSE_EXAM_DATES = {
+        "2026-04-08": "視覺藝術",
+        "2026-04-09": "中國語文 (一)及(二)",
+        "2026-04-10": "英國語文 (一)及(二)",
+        "2026-04-11": "英國語文 (三)",
+        "2026-04-13": "數學 必修部分",
+        "2026-04-14": "公民與社會發展",
+        "2026-04-16": "化學 (一)及(二)",
+        "2026-04-20": "生物 (一)及(二)",
+        "2026-04-22": "物理 (一)及(二)",
+        "2026-04-23": "地理 (一)及(二)",
+        "2026-04-24": "資訊及通訊科技 (一)及(二)",
+        "2026-04-25": "歷史 (一)及(二)",
+        "2026-04-27": "企業、會計與財務概論 (一)及(二)",
+        "2026-04-29": "中國歷史 (一)及(二)",
+        "2026-04-30": "數學 延伸部分單元 (一)及(二)",
+        "2026-05-02": "旅遊與款待 (一)及(二)",
+        "2026-05-04": "經濟 (一)及(二)"
+    };
+    const QUOTES = [
+        "成功不是偶然，是努力的必然結果。",
+        "今天的汗水，是明天的微笑。",
+        "相信自己，你能做的比想像中更多。",
+        "每一次的努力，都是在為未來鋪路。",
+        "堅持下去，夢想就在不遠處。",
+        "不要害怕失敗，它是成功之母。",
+        "專注當下，一步一腳印地前進。",
+        "最大的敵人，是放棄的自己。",
+        "知識改變命運，學習成就未來。",
+        "為夢想而戰，你將無所不能。"
+    ];
+
+
+    // --- Utility Functions ---
     const showSpinner = () => loadingSpinner.classList.remove('hidden');
     const hideSpinner = () => loadingSpinner.classList.add('hidden');
     const formatDate = (date) => {
@@ -180,190 +223,435 @@
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     };
-    function navigateTo(pageName) { Object.values(pages).forEach(p => p.classList.add('hidden')); if (pages[pageName]) { pages[pageName].classList.remove('hidden'); pages[pageName].classList.add('flex'); } }
-    
-    // --- NEW: API Communication Layer ---
-    /**
-     * 呼叫後端 Google Apps Script API 的通用函式
-     * @param {string} action - 要執行的後端操作名稱
-     * @param {object} payload - 要傳送的資料
-     * @returns {Promise<object>} - 從後端回傳的資料
-     */
-    async function callApi(action, payload = {}) {
-        if (GAS_WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
-            alert('錯誤：請先在 index.html 中設定您的 GAS_WEB_APP_URL！');
-            throw new Error('GAS Web App URL 未設定');
+
+    // --- API Communication ---
+    async function callApi(action, payload) {
+        if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === 'YOUR_GAS_WEB_APP_URL_HERE') {
+            toast.show("錯誤：未設定後端 API 網址");
+            console.error("GAS_WEB_APP_URL is not set.");
+            return { success: false, message: "API URL not configured." };
         }
+        showSpinner();
         try {
             const response = await fetch(GAS_WEB_APP_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // GAS Web App 用 text/plain 接收 POST 資料
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
                 body: JSON.stringify({ action, payload }),
-                mode: 'cors'
+                redirect: 'follow'
             });
-
+            
             if (!response.ok) {
-                throw new Error(`HTTP 錯誤! 狀態碼: ${response.status}`);
+                 throw new Error(`伺服器錯誤: ${response.statusText}`);
             }
 
             const result = await response.json();
-            if (!result.success) {
-                throw new Error(result.message || 'API 回傳了一個錯誤');
-            }
-            return result.data;
+            return result;
 
         } catch (error) {
             console.error('API 呼叫失敗:', error);
-            alert(`與伺服器通訊時發生錯誤: ${error.message}`);
-            throw error; // 將錯誤繼續拋出，讓呼叫者可以處理
-        }
-    }
-
-    // --- Data Fetching and Auth (MODIFIED to use callApi) ---
-    async function handleLogin() {
-        const id = document.getElementById('userId').value.trim();
-        const pw = document.getElementById('password').value.trim();
-        const loginError = document.getElementById('login-error');
-        if (!id || !pw) { loginError.textContent = '帳號和密碼不能為空'; return; }
-        loginError.textContent = '';
-        showSpinner();
-        try {
-            const result = await callApi('checkLogin', { id, pw });
-            state.currentUser = { id, role: result.role };
-            sessionStorage.setItem('currentUser', JSON.stringify(state.currentUser));
-            if (result.role === 'admin') {
-                await initializeAdminPage();
-            } else {
-                await initializeMainPage();
-            }
-        } catch (error) {
-            loginError.textContent = '登入失敗：' + error.message;
+            toast.show(`與伺服器通訊時發生錯誤: ${error.message}`);
+            return { success: false, message: error.toString() };
         } finally {
             hideSpinner();
         }
     }
 
-    async function fetchDataForUser(userId) {
-        showSpinner();
-        try {
-            const data = await callApi('getStudyData', { userId });
-            const isMainPage = !document.getElementById('main-page').classList.contains('hidden');
-            if (isMainPage) {
-                state.studyData = data;
-                renderCalendar(state.currentDate, 'calendar-grid', state.studyData);
-            } else {
-                state.admin.studentData = data;
-                renderCalendar(state.admin.currentDate, 'admin-calendar-grid', state.admin.studentData, true);
-            }
-        } catch (error) {
-            // 錯誤已在 callApi 中 alert
-        } finally {
-            hideSpinner();
+    // --- Page Navigation ---
+    function navigateTo(pageName) {
+        Object.values(pages).forEach(page => page.classList.add('hidden'));
+        if (pages[pageName]) {
+            pages[pageName].classList.remove('hidden');
+            pages[pageName].classList.add('flex');
         }
     }
-    
-    async function handleSaveContent() {
-        const modalBody = document.getElementById('modal-body');
-        const entryElements = modalBody.querySelectorAll('.entry-item');
-        const entries = Array.from(entryElements).map(el => ({
-            subject: el.querySelector('.entry-subject').value,
-            hours: Math.round(parseFloat(el.querySelector('.entry-hours').value || 0) * 100) / 100,
-            content: el.querySelector('.entry-content').value.trim()
-        })).filter(e => e.subject || e.hours > 0 || e.content);
 
-        const date = document.getElementById('modal-date').textContent;
-        const contentString = entries.length > 0 ? JSON.stringify(entries) : '';
+    // --- Login Page Logic ---
+    function setupLoginPage() {
+        const dseTargetDate = new Date('2026-04-09T00:00:00');
+        const countdownTimer = document.getElementById('countdown-timer');
+        const dailyQuote = document.getElementById('daily-quote');
         
-        showSpinner();
-        try {
-            await callApi('saveStudyData', { date, content: contentString, userId: state.currentUser.id });
-            if (contentString) {
-                state.studyData[date] = contentString;
+        function updateCountdown() {
+            const now = new Date();
+            const diff = dseTargetDate - now;
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            countdownTimer.textContent = `${days} 日`;
+        }
+        
+        dailyQuote.textContent = QUOTES[Math.floor(Math.random() * QUOTES.length)];
+        updateCountdown();
+        setInterval(updateCountdown, 1000 * 60); // Update every minute
+    }
+
+    async function handleLogin() {
+        const id = document.getElementById('user-id').value.trim();
+        const pw = document.getElementById('user-pw').value.trim();
+        if (!id || !pw) {
+            toast.show('ID和密碼不能為空');
+            return;
+        }
+
+        const result = await callApi('checkLogin', { id, pw });
+
+        if (result.success) {
+            state.currentUser = { id, role: result.data.role };
+            if (result.data.role === 'admin') {
+                initializeAdminPage();
             } else {
-                delete state.studyData[date];
+                initializeMainPage();
             }
-            renderCalendar(state.currentDate, 'calendar-grid', state.studyData);
-            closeModal();
-        } catch(error) {
-            // 錯誤已在 callApi 中 alert
-        } finally {
-            hideSpinner();
+        } else {
+            toast.show(result.message || '登入失敗');
         }
     }
+    
+    // --- Main Page & Calendar Logic ---
+    function renderCalendar(date, containerId, studyData, isAdminView = false) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        const month = date.getMonth();
+        const year = date.getFullYear();
 
-    async function handleDeleteContent() {
-        const date = document.getElementById('modal-date').textContent;
-        showSpinner();
-        try {
-            await callApi('saveStudyData', { date, content: '', userId: state.currentUser.id });
-            delete state.studyData[date];
-            renderCalendar(state.currentDate, 'calendar-grid', state.studyData);
-            closeModal();
-        } catch(error) {
-            // 錯誤已在 callApi 中 alert
-        } finally {
-            hideSpinner();
+        const firstDayOfMonth = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        
+        const monthYearEl = document.getElementById(isAdminView ? 'admin-current-month-year' : 'current-month-year');
+        monthYearEl.textContent = `${year}年 ${month + 1}月`;
+
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            container.innerHTML += '<div></div>';
+        }
+
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dayDate = new Date(year, month, i);
+            const dateStr = formatDate(dayDate);
+            const dayEl = document.createElement('div');
+            dayEl.className = 'p-1 text-center cursor-pointer flex flex-col items-center justify-center rounded-lg aspect-square transition duration-200';
+            
+            const dayNumber = document.createElement('span');
+            dayNumber.textContent = i;
+            dayEl.appendChild(dayNumber);
+
+            const today = new Date();
+            if (i === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+                dayNumber.className = 'bg-indigo-600 text-white rounded-full h-6 w-6 flex items-center justify-center';
+            } else {
+                 dayNumber.className = 'h-6 w-6 flex items-center justify-center';
+            }
+            
+            const dataForDay = studyData[dateStr];
+            if (dataForDay) {
+                const checkmark = document.createElement('span');
+                checkmark.textContent = '✅';
+                checkmark.className = 'text-xs mt-1';
+                dayEl.appendChild(checkmark);
+                if (isAdminView) {
+                     dayEl.addEventListener('click', () => {
+                        try {
+                           const parsedData = JSON.parse(dataForDay);
+                           adminViewModal.open(dateStr, parsedData);
+                        } catch(e) {
+                           adminViewModal.open(dateStr, []); // Or handle old format
+                        }
+                     });
+                }
+            }
+
+            if(DSE_EXAM_DATES[dateStr]){
+                const examLabel = document.createElement('div');
+                examLabel.textContent = DSE_EXAM_DATES[dateStr];
+                examLabel.className = 'text-xs text-red-500 dark:text-red-400 mt-1 truncate leading-tight';
+                dayEl.appendChild(examLabel);
+                dayEl.classList.add('bg-red-100', 'dark:bg-red-900/50');
+            } else {
+                 dayEl.classList.add('hover:bg-gray-100', 'dark:hover:bg-gray-700');
+            }
+
+            if (!isAdminView) {
+                dayEl.addEventListener('click', () => editModal.open(dateStr));
+            }
+            
+            container.appendChild(dayEl);
         }
     }
-
-    async function fetchStudentsForAdmin() {
-        showSpinner();
-        try {
-            const studentIds = await callApi('getAllStudentIds');
-            state.admin.students = studentIds;
-            const selector = document.getElementById('student-selector');
-            selector.innerHTML = '<option value="">-- 選擇學生 --</option>';
-            studentIds.forEach(id => selector.add(new Option(id, id)));
-            if (studentIds.length > 0) {
-                selector.value = studentIds[0];
-                state.admin.selectedStudent = studentIds[0];
-                await fetchDataForUser(studentIds[0]);
-            }
-        } catch(error) {
-            // 錯誤已在 callApi 中 alert
-        } finally {
-            // 確保即使學生列表載入成功，spinner 也會被隱藏
-            if (state.admin.students.length === 0) {
-                hideSpinner();
+    
+    // --- Data Fetching ---
+    async function fetchDataForUser(userId) {
+        const result = await callApi('getStudyData', { userId });
+        if(result.success) {
+            state.studyData = result.data || {};
+            if(state.currentUser && state.currentUser.role === 'student') {
+                renderCalendar(state.currentDate, 'calendar-body', state.studyData);
+            } else if (state.currentUser && state.currentUser.role === 'admin') {
+                 renderCalendar(state.adminCurrentDate, 'admin-calendar-body', state.studyData, true);
             }
         }
     }
     
-    // --- Page Initializers (MODIFIED to be async) ---
-    async function initializeMainPage() {
+    // --- Edit Modal Logic ---
+    const editModal = {
+        element: document.getElementById('edit-modal'),
+        dateEl: document.getElementById('modal-date'),
+        entriesContainer: document.getElementById('entries-container'),
+        currentDate: null,
+        
+        open: function(dateStr) {
+            this.currentDate = dateStr;
+            this.dateEl.textContent = dateStr;
+            this.renderEntries();
+            this.element.classList.remove('hidden');
+        },
+        close: function() {
+            this.element.classList.add('hidden');
+        },
+        renderEntries: function() {
+            this.entriesContainer.innerHTML = '';
+            const dataStr = state.studyData[this.currentDate];
+            let entries = [];
+            if(dataStr) {
+                try {
+                    entries = JSON.parse(dataStr);
+                } catch(e) {
+                    // Backwards compatibility for old plain text
+                    entries = [{ subject: SUBJECTS[0], hours: '', content: dataStr }];
+                }
+            }
+
+            if (entries.length === 0) {
+                this.addEntryElement();
+            } else {
+                entries.forEach(entry => this.addEntryElement(entry));
+            }
+        },
+        addEntryElement: function(entry = { subject: SUBJECTS[0], hours: '', content: '' }) {
+            const entryDiv = document.createElement('div');
+            entryDiv.className = 'p-2 border rounded-lg mb-2 flex items-center gap-2 bg-gray-50 dark:bg-gray-700/50';
+            entryDiv.innerHTML = `
+                <div class="flex-grow">
+                    <select class="subject-select w-full bg-transparent p-1 rounded">
+                        ${SUBJECTS.map(s => `<option value="${s}" ${s === entry.subject ? 'selected' : ''}>${s}</option>`).join('')}
+                    </select>
+                    <div class="flex gap-2 mt-1">
+                        <input type="number" step="0.01" class="hours-input w-1/3 bg-transparent p-1 rounded" placeholder="時數" value="${entry.hours}">
+                        <input type="text" class="content-input w-2/3 bg-transparent p-1 rounded" placeholder="溫習內容" value="${entry.content}">
+                    </div>
+                </div>
+                <button class="remove-entry-btn text-red-500 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+            `;
+            entryDiv.querySelector('.remove-entry-btn').addEventListener('click', () => entryDiv.remove());
+            this.entriesContainer.appendChild(entryDiv);
+        },
+        save: async function() {
+            const entryElements = this.entriesContainer.querySelectorAll('.p-2.border');
+            const entries = [];
+            let hasError = false;
+            entryElements.forEach(el => {
+                const subject = el.querySelector('.subject-select').value;
+                const hoursInput = el.querySelector('.hours-input');
+                const content = el.querySelector('.content-input').value.trim();
+                
+                let hours = parseFloat(hoursInput.value);
+                if (isNaN(hours) || hours < 0) {
+                     toast.show("時數必須是正數");
+                     hasError = true;
+                     return;
+                }
+                hours = Math.round(hours * 100) / 100; // Round to 2 decimal places
+                
+                if (hours > 0 || content) { // Only save if there's some data
+                     entries.push({ subject, hours: hours || 0, content });
+                }
+            });
+
+            if(hasError) return;
+
+            const result = await callApi('saveStudyData', {
+                userId: state.currentUser.id,
+                date: this.currentDate,
+                content: entries
+            });
+
+            if (result.success) {
+                await fetchDataForUser(state.currentUser.id);
+                this.close();
+                toast.show('儲存成功！');
+            } else {
+                toast.show(result.message || '儲存失敗');
+            }
+        }
+    };
+    
+    // --- Stats Modal Logic ---
+    const statsModal = {
+        element: document.getElementById('stats-modal'),
+        open: function(isForAdmin = false) {
+            const date = isForAdmin ? state.adminCurrentDate : state.currentDate;
+            const data = state.studyData;
+            const userId = isForAdmin ? state.adminSelectedUser : state.currentUser.id;
+
+            document.getElementById('stats-title').textContent = `${userId} 的溫習時數統計`;
+            document.getElementById('stats-month').textContent = `${date.getFullYear()}年 ${date.getMonth() + 1}月`;
+            
+            let totalHours = 0;
+            const subjectHours = {};
+            SUBJECTS.forEach(s => subjectHours[s] = 0);
+            
+            const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+            for (const dateStr in data) {
+                if (dateStr.startsWith(monthStr)) {
+                    try {
+                        const entries = JSON.parse(data[dateStr]);
+                        if(Array.isArray(entries)) {
+                            entries.forEach(entry => {
+                                const hours = parseFloat(entry.hours) || 0;
+                                totalHours += hours;
+                                if (subjectHours.hasOwnProperty(entry.subject)) {
+                                    subjectHours[entry.subject] += hours;
+                                }
+                            });
+                        }
+                    } catch(e) { /* ignore old format */ }
+                }
+            }
+
+            document.getElementById('total-hours').textContent = totalHours.toFixed(2);
+            const container = document.getElementById('subject-stats-container');
+            container.innerHTML = '';
+            
+            Object.entries(subjectHours)
+                .filter(([_, hours]) => hours > 0)
+                .sort((a, b) => b[1] - a[1])
+                .forEach(([subject, hours]) => {
+                    const el = document.createElement('div');
+                    el.className = 'flex justify-between items-center text-sm';
+                    el.innerHTML = `
+                        <span>${subject}</span>
+                        <span class="font-semibold">${hours.toFixed(2)} 小時</span>
+                    `;
+                    container.appendChild(el);
+            });
+            
+            this.element.classList.remove('hidden');
+        },
+        close: function() {
+            this.element.classList.add('hidden');
+        }
+    };
+
+    // --- Admin View Modal ---
+    const adminViewModal = {
+        element: document.getElementById('admin-view-modal'),
+        open: function(dateStr, entries) {
+            document.getElementById('admin-view-title').textContent = `查看 ${dateStr} 的紀錄`;
+            const container = document.getElementById('admin-view-entries-container');
+            container.innerHTML = '';
+
+            if(Array.isArray(entries) && entries.length > 0) {
+                entries.forEach(entry => {
+                    const el = document.createElement('div');
+                    el.className = 'p-3 bg-gray-100 dark:bg-gray-700 rounded-lg';
+                    el.innerHTML = `
+                        <p class="font-bold text-indigo-500">${entry.subject} - <span class="text-gray-800 dark:text-gray-200">${entry.hours} 小時</span></p>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">${entry.content || '<i>沒有內容</i>'}</p>
+                    `;
+                    container.appendChild(el);
+                });
+            } else {
+                 container.innerHTML = `<p class="text-center text-gray-500">當天沒有紀錄。</p>`;
+            }
+            this.element.classList.remove('hidden');
+        },
+        close: function() {
+            this.element.classList.add('hidden');
+        }
+    };
+
+
+    // --- Page Initializers ---
+    function initializeMainPage() {
         document.getElementById('current-user-id').textContent = `你好, ${state.currentUser.id}`;
         navigateTo('main');
-        await fetchDataForUser(state.currentUser.id);
-    }
-    async function initializeAdminPage() {
-        navigateTo('admin');
-        await fetchStudentsForAdmin();
+        renderCalendar(state.currentDate, 'calendar-body', state.studyData);
+        fetchDataForUser(state.currentUser.id);
     }
     
-    // --- The rest of the code (UI logic) remains largely the same ---
-    // It's already decoupled from the data fetching logic.
-    function setupTheme(){const sunIcon=`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707"></path><circle cx="12" cy="12" r="5"></circle>`;const moonIcon=`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>`;const themeToggleBtns=document.querySelectorAll('[id^="theme-toggle-"]');const themeIcons=document.querySelectorAll('[id^="theme-icon-"]');const applyTheme=(isDark)=>{document.documentElement.classList.toggle('dark',isDark);themeIcons.forEach(icon=>icon.innerHTML=isDark?sunIcon:moonIcon)};const isDarkMode=localStorage.getItem('theme')==='dark'||(!('theme'in localStorage)&&window.matchMedia('(prefers-color-scheme: dark)').matches);applyTheme(isDarkMode);themeToggleBtns.forEach(btn=>{btn.addEventListener('click',()=>{const isDark=document.documentElement.classList.toggle('dark');localStorage.setItem('theme',isDark?'dark':'light');applyTheme(isDark)})})}
-    function updateCountdown(){const now=new Date();const diffTime=DSE_TARGET_DATE-now;const diffDays=Math.ceil(diffTime/(1000*60*60*24));document.getElementById('countdown-days').textContent=diffDays>0?diffDays:'0'}
-    function displayRandomQuote(){const quote=QUOTES[Math.floor(Math.random()*QUOTES.length)];document.getElementById('quote-text').textContent=`"${quote}"`}
-    function renderCalendar(date,containerId,data,isInteractive=!0){const container=document.getElementById(containerId);const headerId=containerId.startsWith('admin')?'admin-calendar-header':'calendar-header';document.getElementById(headerId).textContent=`${date.getFullYear()}年 ${date.getMonth()+1}月`;container.innerHTML='';const year=date.getFullYear();const month=date.getMonth();const firstDay=new Date(year,month,1).getDay();const daysInMonth=new Date(year,month+1,0).getDate();const today=new Date();for(let i=0;i<firstDay;i++)container.appendChild(document.createElement('div'));for(let day=1;day<=daysInMonth;day++){const cell=document.createElement('div');cell.className='day-cell';const fullDate=formatDate(new Date(year,month,day));const contentWrapper=document.createElement('div');contentWrapper.className=`day-content flex flex-col items-center justify-start p-1 rounded-md text-center text-xs transition-colors duration-200`;const dayNumber=document.createElement('span');dayNumber.textContent=day;dayNumber.className='font-medium mb-0.5';if(year===today.getFullYear()&&month===today.getMonth()&&day===today.getDate()){dayNumber.classList.add('bg-primary-600','text-white','rounded-full','w-5','h-5','flex','items-center','justify-center')}contentWrapper.appendChild(dayNumber);if(data[fullDate]){try{const entries=JSON.parse(data[fullDate]);if(Array.isArray(entries)&&entries.length>0){const indicator=document.createElement('div');indicator.innerHTML=`<svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;contentWrapper.appendChild(indicator)}}catch(e){}}if(SPECIAL_DATES[fullDate]){const specialText=document.createElement('p');specialText.className='leading-tight text-primary-700 dark:text-primary-300 font-semibold';specialText.textContent=SPECIAL_DATES[fullDate];contentWrapper.appendChild(specialText)}const isForAdmin=containerId.startsWith('admin');const canClick=isInteractive&&(!isForAdmin||(isForAdmin&&data[fullDate]));if(canClick){contentWrapper.classList.add('cursor-pointer','hover:bg-primary-100','dark:hover:bg-primary-900');if(isForAdmin){cell.addEventListener('click',()=>openAdminViewModal(fullDate))}else{cell.addEventListener('click',()=>openEditModal(fullDate))}}cell.appendChild(contentWrapper);container.appendChild(cell)}}
-    function createEntryElement(entry={subject:'',hours:'',content:''}){const entryDiv=document.createElement('div');entryDiv.className='p-3 border dark:border-gray-600 rounded-lg space-y-2 relative entry-item';const selectOptions=SUBJECTS.map(s=>`<option value="${s}" ${entry.subject===s?'selected':''}>${s}</option>`).join('');entryDiv.innerHTML=`<button class="absolute top-1 right-1 p-1 text-gray-400 hover:text-red-500 remove-entry-btn"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button><div class="grid grid-cols-5 gap-2"><select class="col-span-3 text-sm p-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 entry-subject">${selectOptions}</select><input type="number" value="${entry.hours}" placeholder="時數" step="0.01" class="col-span-2 text-sm p-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 entry-hours"></div><textarea rows="2" placeholder="內容" class="w-full text-sm p-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-md focus:ring-primary-500 focus:border-primary-500 entry-content">${entry.content}</textarea>`;entryDiv.querySelector('.remove-entry-btn').addEventListener('click',()=>entryDiv.remove());return entryDiv}
-    function openEditModal(date){document.getElementById('modal-date').textContent=date;const modalBody=document.getElementById('modal-body');modalBody.innerHTML='';const dataStr=state.studyData[date];if(dataStr){try{const entries=JSON.parse(dataStr);if(Array.isArray(entries)&&entries.length>0){entries.forEach(entry=>modalBody.appendChild(createEntryElement(entry)))}else{modalBody.appendChild(createEntryElement())}}catch(e){modalBody.appendChild(createEntryElement())}}else{modalBody.appendChild(createEntryElement())}editModal.classList.remove('hidden')}
-    function closeModal(){editModal.classList.add('hidden')}
-    function openAdminViewModal(date){const adminViewModalBody=document.getElementById('admin-view-modal-body');document.getElementById('admin-view-modal-date').textContent=`${state.admin.selectedStudent} 於 ${date} 的記錄`;adminViewModalBody.innerHTML='';const dataStr=state.admin.studentData[date];if(dataStr){try{const entries=JSON.parse(dataStr);if(Array.isArray(entries)&&entries.length>0){const list=document.createElement('ul');list.className='space-y-3';entries.forEach(entry=>{const item=document.createElement('li');item.className='p-3 border dark:border-gray-600 rounded-lg';let itemHTML=`<div class="flex justify-between items-center font-semibold"><span class="text-primary-600 dark:text-primary-400">${entry.subject||'未指定科目'}</span><span class="text-sm">${(parseFloat(entry.hours)||0).toFixed(2)} 小時</span></div>`;if(entry.content){itemHTML+=`<p class="mt-2 text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">${entry.content}</p>`}item.innerHTML=itemHTML;list.appendChild(item)});adminViewModalBody.appendChild(list)}else{adminViewModalBody.innerHTML='<p class="text-sm text-gray-500">本日沒有詳細記錄。</p>'}}catch(e){adminViewModalBody.innerHTML='<p class="text-sm text-gray-500">資料格式錯誤，無法顯示。</p>'}}else{adminViewModalBody.innerHTML='<p class="text-sm text-gray-500">本日沒有記錄。</p>'}adminViewModal.classList.remove('hidden')}
-    function closeAdminViewModal(){adminViewModal.classList.add('hidden')}
-    function showStats(forAdmin=!1){const data=forAdmin?state.admin.studentData:state.studyData;const date=forAdmin?state.admin.currentDate:state.currentDate;const studentId=forAdmin?state.admin.selectedStudent:state.currentUser.id;if(forAdmin&&!studentId){alert('請先選擇一位學生。');return}document.getElementById('stats-modal-title').textContent=forAdmin?`${studentId} 的統計`:'溫習時數統計';const statsBody=document.getElementById('stats-body');statsBody.innerHTML='';const currentMonth=date.getMonth();const currentYear=date.getFullYear();let totalHours=0;const subjectHours={};for(const dateStr in data){const entryDate=new Date(dateStr);if(entryDate.getMonth()===currentMonth&&entryDate.getFullYear()===currentYear){try{const entries=JSON.parse(data[dateStr]);if(Array.isArray(entries)){entries.forEach(entry=>{const hours=parseFloat(entry.hours)||0;totalHours+=hours;if(entry.subject){subjectHours[entry.subject]=(subjectHours[entry.subject]||0)+hours}})}}catch(e){}}}const monthName=`${currentYear}年 ${currentMonth+1}月`;let contentHTML=`<h4 class="font-semibold text-lg">${monthName}總溫習時數</h4><p class="text-3xl font-bold text-primary-500">${totalHours.toFixed(2)} <span class="text-lg">小時</span></p><div class="border-t dark:border-gray-600 mt-4 pt-4"><h5 class="font-semibold mb-2">各科分佈：</h5>`;if(Object.keys(subjectHours).length>0){contentHTML+='<ul class="space-y-2">';for(const subject in subjectHours){contentHTML+=`<li class="flex justify-between items-center text-sm"><span class="text-gray-600 dark:text-gray-300">${subject}</span><span class="font-medium">${subjectHours[subject].toFixed(2)} 小時</span></li>`}contentHTML+='</ul>'}else{contentHTML+='<p class="text-sm text-gray-500">本月暫無記錄。</p>'}contentHTML+='</div>';statsBody.innerHTML=contentHTML;statsModal.classList.remove('hidden')}
-    function closeStatsModal(){statsModal.classList.add('hidden')}
-    function handleLogout(){state.currentUser=null;sessionStorage.removeItem('currentUser');document.getElementById('userId').value='';document.getElementById('password').value='';document.getElementById('login-error').textContent='';navigateTo('login')}
-    function setupEventListeners(){document.getElementById('login-btn').addEventListener('click',handleLogin);document.getElementById('password').addEventListener('keyup',e=>e.key==='Enter'&&handleLogin());document.getElementById('logout-btn').addEventListener('click',handleLogout);document.getElementById('logout-btn-admin').addEventListener('click',handleLogout);document.getElementById('prev-month').addEventListener('click',()=>{state.currentDate.setMonth(state.currentDate.getMonth()-1);renderCalendar(state.currentDate,'calendar-grid',state.studyData)});document.getElementById('next-month').addEventListener('click',()=>{state.currentDate.setMonth(state.currentDate.getMonth()+1);renderCalendar(state.currentDate,'calendar-grid',state.studyData)});document.getElementById('admin-prev-month').addEventListener('click',()=>{state.admin.currentDate.setMonth(state.admin.currentDate.getMonth()-1);renderCalendar(state.admin.currentDate,'admin-calendar-grid',state.admin.studentData,!0)});document.getElementById('admin-next-month').addEventListener('click',()=>{state.admin.currentDate.setMonth(state.admin.currentDate.getMonth()+1);renderCalendar(state.admin.currentDate,'admin-calendar-grid',state.admin.studentData,!0)});document.getElementById('student-selector').addEventListener('change',e=>{const selectedId=e.target.value;if(selectedId){state.admin.selectedStudent=selectedId;state.admin.currentDate=new Date();fetchDataForUser(selectedId)}else{document.getElementById('admin-calendar-grid').innerHTML='';document.getElementById('admin-calendar-header').textContent='請選擇一位學生'}});document.getElementById('close-modal-btn').addEventListener('click',closeModal);document.getElementById('save-content-btn').addEventListener('click',handleSaveContent);document.getElementById('delete-content-btn').addEventListener('click',handleDeleteContent);document.getElementById('add-entry-btn').addEventListener('click',()=>document.getElementById('modal-body').appendChild(createEntryElement()));editModal.addEventListener('click',e=>e.target===editModal&&closeModal());document.getElementById('stats-btn').addEventListener('click',()=>showStats(!1));document.getElementById('admin-stats-btn').addEventListener('click',()=>showStats(!0));document.getElementById('close-stats-modal-btn').addEventListener('click',closeStatsModal);statsModal.addEventListener('click',e=>e.target===statsModal&&closeStatsModal());document.getElementById('close-admin-view-modal-btn').addEventListener('click',closeAdminViewModal);adminViewModal.addEventListener('click',e=>e.target===adminViewModal&&closeAdminViewModal())}
-    async function init(){setupTheme();updateCountdown();displayRandomQuote();setInterval(updateCountdown,60000);setupEventListeners();const storedUser=sessionStorage.getItem('currentUser');if(storedUser){state.currentUser=JSON.parse(storedUser);if(state.currentUser.role==='admin'){await initializeAdminPage()}else{await initializeMainPage()}}else{navigateTo('login')}}
-    window.addEventListener('load',init);
-    </script>
+    async function initializeAdminPage() {
+        navigateTo('admin');
+        const result = await callApi('getAllStudentIds', {});
+        if (result.success && result.data.length > 0) {
+            state.allStudentIds = result.data;
+            const selector = document.getElementById('student-selector');
+            selector.innerHTML = state.allStudentIds.map(id => `<option value="${id}">${id}</option>`).join('');
+            state.adminSelectedUser = state.allStudentIds[0];
+            fetchDataForUser(state.adminSelectedUser);
+            renderCalendar(state.adminCurrentDate, 'admin-calendar-body', state.studyData, true);
+        } else if (!result.success) {
+            toast.show("無法獲取學生列表");
+        }
+    }
+
+    // --- Event Listeners Setup ---
+    function setupEventListeners() {
+        document.getElementById('login-btn').addEventListener('click', handleLogin);
+        document.getElementById('user-pw').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') handleLogin();
+        });
+        
+        // Main page controls
+        document.getElementById('logout-btn').addEventListener('click', () => location.reload());
+        document.getElementById('prev-month-btn').addEventListener('click', () => {
+            state.currentDate.setMonth(state.currentDate.getMonth() - 1);
+            renderCalendar(state.currentDate, 'calendar-body', state.studyData);
+        });
+        document.getElementById('next-month-btn').addEventListener('click', () => {
+            state.currentDate.setMonth(state.currentDate.getMonth() + 1);
+            renderCalendar(state.currentDate, 'calendar-body', state.studyData);
+        });
+
+        // Admin page controls
+        document.getElementById('admin-logout-btn').addEventListener('click', () => location.reload());
+        document.getElementById('student-selector').addEventListener('change', (e) => {
+            state.adminSelectedUser = e.target.value;
+            fetchDataForUser(state.adminSelectedUser);
+        });
+         document.getElementById('admin-prev-month-btn').addEventListener('click', () => {
+            state.adminCurrentDate.setMonth(state.adminCurrentDate.getMonth() - 1);
+            renderCalendar(state.adminCurrentDate, 'admin-calendar-body', state.studyData, true);
+        });
+        document.getElementById('admin-next-month-btn').addEventListener('click', () => {
+            state.adminCurrentDate.setMonth(state.adminCurrentDate.getMonth() + 1);
+            renderCalendar(state.adminCurrentDate, 'admin-calendar-body', state.studyData, true);
+        });
+
+
+        // Modals controls
+        document.getElementById('modal-save-btn').addEventListener('click', () => editModal.save());
+        document.getElementById('modal-close-btn').addEventListener('click', () => editModal.close());
+        document.getElementById('add-entry-btn').addEventListener('click', () => editModal.addEntryElement());
+
+        document.getElementById('stats-btn').addEventListener('click', () => statsModal.open());
+        document.getElementById('stats-close-btn').addEventListener('click', () => statsModal.close());
+        document.getElementById('admin-stats-btn').addEventListener('click', () => statsModal.open(true));
+        
+        document.getElementById('admin-view-close-btn').addEventListener('click', () => adminViewModal.close());
+    }
+
+    // --- App Initialization ---
+    function init() {
+        setupLoginPage();
+        setupEventListeners();
+        navigateTo('login');
+    }
+
+    init();
+});
+</script>
 </body>
 </html>
-
-
-
-
-
-
 
