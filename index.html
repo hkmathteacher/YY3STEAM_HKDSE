@@ -38,21 +38,20 @@
             display: none; /* 所有頁面預設隱藏 */
         }
         .page.active { 
-            /* 啟動的頁面只負責動畫，顯示方式由 JS 控制 */
             animation: fadeIn 0.5s ease-in-out; 
         }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
         .modal-backdrop {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
             display: flex; justify-content: center; align-items: center;
             z-index: 50; opacity: 0; visibility: hidden;
             transition: opacity 0.3s ease, visibility 0.3s ease;
         }
         .modal-backdrop.active { opacity: 1; visibility: visible; }
-        .modal-content { transform: translateY(20px); transition: transform 0.3s ease; }
-        .modal-backdrop.active .modal-content { transform: translateY(0); }
+        .modal-content { transform: scale(0.95); transition: transform 0.3s ease; }
+        .modal-backdrop.active .modal-content { transform: scale(1); }
 
         /* 日曆樣式 */
         .calendar-grid { 
@@ -60,29 +59,31 @@
         }
         .calendar-day-cell {
             display: flex;
+            flex-direction: column; /* 讓日期和科目文字垂直排列 */
             justify-content: center;
             align-items: center;
             position: relative;
+            aspect-ratio: 1 / 1; /* 維持方形 */
         }
-        .dse-day-indicator {
-            position: absolute;
-            bottom: 4px;
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            background-color: #c0392b;
-        }
-        html.dark .dse-day-indicator { background-color: #f87171; }
-
         .record-indicator {
             position: absolute;
-            bottom: 4px;
-            width: 5px;
-            height: 5px;
+            top: 6px;
+            right: 6px;
+            width: 6px;
+            height: 6px;
             border-radius: 50%;
             background-color: #27ae60;
         }
         html.dark .record-indicator { background-color: #58d68d; }
+        .dse-subject-text {
+            font-size: 0.65rem; /* 調整字體大小 */
+            line-height: 1;
+            margin-top: 2px;
+            color: #c0392b;
+            font-weight: bold;
+            text-align: center;
+        }
+        html.dark .dse-subject-text { color: #f87171; }
         
         /* 載入中動畫 */
         #loader {
@@ -101,17 +102,6 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* 紀錄 Modal 輸入框的統一風格 */
-        .record-input {
-            border: none !important;
-            box-shadow: none !important;
-            outline: none !important;
-            --tw-ring-shadow: none !important;
-            background-color: rgb(243 244 246) !important;
-        }
-        html.dark .record-input {
-            background-color: rgb(55 65 81) !important;
-        }
     </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
@@ -164,8 +154,8 @@
         <!-- 學生/管理員主頁面 (自適應高度佈局) -->
         <div id="main-page" class="page flex-col h-screen">
             <header class="px-4 py-3 flex justify-between items-center sticky top-0 z-10 flex-shrink-0 border-b border-gray-200 dark:border-gray-700">
-                <div id="header-left" class="flex items-center gap-2">
-                    <h1 id="main-title" class="text-xl font-bold">溫習日曆</h1>
+                <div id="header-left" class="flex items-center gap-2 overflow-hidden">
+                    <h1 id="main-title" class="text-xl font-bold truncate">溫習日曆</h1>
                     <div id="admin-controls" class="hidden">
                         <select id="student-selector" class="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md py-1 px-2 text-sm focus:ring-blue-500 focus:border-blue-500">
                             <option value="">選擇學生</option>
@@ -188,29 +178,33 @@
                     <button id="next-month" class="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">&gt;</button>
                 </div>
 
-                <div class="grid calendar-grid gap-1 text-center font-semibold text-gray-600 dark:text-gray-400 mb-2 flex-shrink-0">
+                <div class="grid calendar-grid gap-x-1 text-center font-semibold text-gray-600 dark:text-gray-400 mb-2 flex-shrink-0">
                     <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
                 </div>
-                <div id="calendar-body" class="grid calendar-grid gap-1 flex-grow"></div>
+                <div id="calendar-body" class="grid calendar-grid gap-x-1 flex-grow"></div>
             </main>
         </div>
     </div>
 
-    <!-- 溫習紀錄 Modal (統一視覺風格) -->
+    <!-- 溫習紀錄 Modal (v8.0 設計) -->
     <div id="record-modal" class="modal-backdrop">
-        <div class="modal-content bg-white dark:bg-gray-800 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
-            <h3 id="modal-date" class="text-2xl font-bold mb-6 text-center"></h3>
+        <div class="modal-content bg-gray-100 dark:bg-gray-900 w-full max-w-lg m-4 p-6 rounded-2xl shadow-xl max-h-[90vh] flex flex-col">
+            <header class="flex justify-between items-center mb-4 flex-shrink-0">
+                 <h3 id="modal-title" class="text-xl font-bold"></h3>
+                 <button id="close-record-modal" class="text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white text-2xl font-bold">&times;</button>
+            </header>
             <div id="record-list" class="flex-grow overflow-y-auto pr-2"></div>
-            <div id="modal-actions" class="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-2 sm:space-y-0 sm:space-x-4">
-                 <button id="add-record-item" class="w-full sm:w-auto flex-grow bg-green-500 text-white py-3 px-4 rounded-lg hover:bg-green-600 transition font-semibold">新增項目</button>
-                 <div class="w-full sm:w-auto flex flex-grow space-x-2">
-                    <button id="save-records" class="w-1/2 flex-grow bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition font-semibold">儲存</button>
-                    <button id="close-record-modal" class="w-1/2 flex-grow bg-gray-500 dark:bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition font-semibold">關閉</button>
-                 </div>
+            <div id="add-item-wrapper" class="mt-3 flex-shrink-0">
+                <button id="add-record-item" class="w-full border-2 border-dashed border-gray-400 dark:border-gray-600 text-gray-500 dark:text-gray-400 rounded-lg py-3 hover:bg-gray-200 dark:hover:bg-gray-800 transition font-semibold">
+                    + 新增項目
+                </button>
             </div>
-            <div id="admin-modal-footer" class="mt-6 text-center hidden">
-                <p id="record-modal-info" class="text-center text-gray-500 mb-4">管理員唯讀模式</p>
-                <button id="close-admin-record-modal" class="w-full bg-gray-500 dark:bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-600 dark:hover:bg-gray-500 transition font-semibold">關閉</button>
+            <div id="modal-actions" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row gap-2 flex-shrink-0">
+                 <button id="clear-records-btn" class="w-full sm:w-1/2 bg-red-600 text-white py-3 px-4 rounded-lg hover:bg-red-700 transition font-semibold">清空本日</button>
+                 <button id="save-records" class="w-full sm:w-1/2 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition font-semibold">儲存</button>
+            </div>
+             <div id="admin-modal-footer" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 text-center hidden flex-shrink-0">
+                <p id="record-modal-info" class="text-center text-gray-500">管理員唯讀模式</p>
             </div>
         </div>
     </div>
@@ -239,6 +233,8 @@
         const QUOTES = ["每一次的努力，都是未來最好的鋪墊。", "堅持下去，不是因為你會成功，而是因為你不想後悔。", "成功的路上並不擁擠，因為堅持的人不多。", "今天你所受的苦，會照亮你未來的路。", "別讓現在的懶，變成未來的難。", "天賦決定上限，努力決定下限。", "你必須很努力，才能看起來毫不費力。"];
         const SUBJECTS = ["中文", "英文", "數學", "物理", "化學", "生物", "M2", "中史", "西史", "地理", "經濟", "旅款", "企會財", "ICT", "VA"];
         const DSE_EXAM_DATES = {'2026-04-08':'視覺藝術', '2026-04-09':'中文', '2026-04-10':'英文(一)(二)', '2026-04-11':'英文(三)', '2026-04-13':'數學', '2026-04-14':'公社', '2026-04-16':'化學', '2026-04-20':'生物', '2026-04-22':'物理', '2026-04-23':'地理', '2026-04-24':'ICT', '2026-04-25':'歷史', '2026-04-27':'企會財', '2026-04-29':'中史', '2026-04-30':'M2', '2026-05-02':'旅款', '2026-05-04':'經濟'};
+        const CHART_COLORS_LIGHT = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8BC34A', '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#03A9F4', '#009688', '#CDDC39'];
+        const CHART_COLORS_DARK = ['#d65773', '#5daeec', '#e3b84e', '#66c9c9', '#ad8cfa', '#e38f38', '#a0ce68', '#dc5a50', '#d13c70', '#b04abf', '#815ec7', '#6072c0', '#2cb4dc', '#2ca598', '#d3e05a'];
 
         let state = {
             currentUser: null, currentDate: new Date(), studentData: {},
@@ -329,13 +325,14 @@
                 const isDseDay = DSE_EXAM_DATES[dateKey];
 
                 const dayEl = document.createElement('div');
-                dayEl.className = 'calendar-day-cell cursor-pointer';
+                dayEl.className = 'calendar-day-cell cursor-pointer rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700/50';
                 dayEl.dataset.date = dateKey;
                 
-                let content = `<span class="w-8 h-8 flex items-center justify-center rounded-full transition-colors">${day}</span>`;
-                if(isToday) content = `<span class="w-8 h-8 flex items-center justify-center rounded-full bg-blue-600 text-white font-bold">${day}</span>`;
+                let dayNumberClass = isToday ? "bg-blue-600 text-white font-bold" : "";
+                let content = `<span class="w-8 h-8 flex items-center justify-center rounded-full transition-colors ${dayNumberClass}">${day}</span>`;
+                
+                if(isDseDay) content += `<span class="dse-subject-text">${isDseDay}</span>`;
                 if(hasRecord) content += `<div class="record-indicator" title="有溫習紀錄"></div>`;
-                if(isDseDay) content += `<div class="dse-day-indicator" title="${isDseDay}"></div>`;
                 
                 dayEl.innerHTML = content;
                 dayEl.addEventListener('click', () => handleDateClick(dateKey));
@@ -350,13 +347,19 @@
         };
         
         const openRecordModal = (dateKey, records, isReadOnly) => {
-            document.getElementById('modal-date').textContent = dateKey;
+            const viewingId = isReadOnly ? state.viewingStudentId : state.currentUser.id;
+            document.getElementById('modal-title').textContent = `${viewingId} 於 ${dateKey} 的紀錄`;
             const recordList = document.getElementById('record-list');
             recordList.innerHTML = '';
             recordList.dataset.date = dateKey;
-            if (records.length === 0 && !isReadOnly) addRecordItem(recordList);
-            else records.forEach(r => addRecordItem(recordList, r, isReadOnly));
+
+            if (records.length === 0 && !isReadOnly) {
+                addRecordItem(recordList);
+            } else {
+                records.forEach(r => addRecordItem(recordList, r, isReadOnly));
+            }
             
+            document.getElementById('add-item-wrapper').classList.toggle('hidden', isReadOnly);
             document.getElementById('modal-actions').classList.toggle('hidden', isReadOnly);
             document.getElementById('admin-modal-footer').classList.toggle('hidden', !isReadOnly);
             
@@ -365,19 +368,31 @@
 
         const addRecordItem = (container, item = {subject: SUBJECTS[0], hours: '', content: ''}, isReadOnly = false) => {
             const itemEl = document.createElement('div');
-            itemEl.className = 'record-item flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4';
             const subjectOptions = SUBJECTS.map(s => `<option value="${s}" ${item.subject === s ? 'selected' : ''}>${s}</option>`).join('');
-            itemEl.innerHTML = `
-                <div class="flex items-center gap-2 flex-grow">
-                    <select class="subject p-3 rounded-lg dark:text-gray-200 w-28 record-input" ${isReadOnly ? 'disabled' : ''}>${subjectOptions}</select>
-                    <input type="number" step="0.01" class="hours p-3 rounded-lg dark:text-gray-200 w-24 record-input" placeholder="時數" value="${item.hours}" ${isReadOnly ? 'disabled' : ''}>
-                    <input type="text" class="content p-3 rounded-lg dark:text-gray-200 flex-grow record-input" placeholder="溫習內容" value="${item.content}" ${isReadOnly ? 'disabled' : ''}>
-                </div>
-                <div class="flex-shrink-0 flex items-center justify-end">
-                    ${!isReadOnly ? '<button class="delete-item-btn text-red-500 hover:text-red-700 font-bold text-2xl px-2 h-full flex items-center">×</button>' : ''}
-                </div>
-            `;
-            if (!isReadOnly) itemEl.querySelector('.delete-item-btn').addEventListener('click', () => itemEl.remove());
+
+            if (isReadOnly) {
+                itemEl.className = 'record-item bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm mb-3';
+                itemEl.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <h4 class="text-lg font-bold text-blue-600 dark:text-blue-400">${item.subject}</h4>
+                        <span class="font-semibold">${item.hours} 小時</span>
+                    </div>
+                    <p class="mt-1 text-gray-600 dark:text-gray-400">${item.content || '<i>無內容</i>'}</p>
+                `;
+            } else {
+                itemEl.className = 'record-item bg-white dark:bg-gray-800 p-3 rounded-xl shadow-sm mb-3 relative';
+                itemEl.innerHTML = `
+                    <button class="delete-item-btn absolute top-2 right-2 text-gray-400 hover:text-red-500 text-xl transition-colors">&times;</button>
+                    <div class="flex items-center gap-2 mb-2">
+                        <select class="subject w-2/3 bg-gray-200 dark:bg-gray-700 border-none rounded-lg p-3 focus:ring-2 focus:ring-blue-500">${subjectOptions}</select>
+                        <input type="number" step="0.01" class="hours w-1/3 bg-gray-200 dark:bg-gray-700 border-none rounded-lg p-3 focus:ring-2 focus:ring-blue-500" placeholder="時數" value="${item.hours}">
+                    </div>
+                    <div>
+                        <input type="text" class="content w-full bg-gray-200 dark:bg-gray-700 border-none rounded-lg p-3 focus:ring-2 focus:ring-blue-500" placeholder="溫習內容..." value="${item.content || ''}">
+                    </div>
+                `;
+                 itemEl.querySelector('.delete-item-btn').addEventListener('click', () => itemEl.remove());
+            }
             container.appendChild(itemEl);
         };
 
@@ -396,9 +411,7 @@
                             totalHours += hours;
                             subjectHours[r.subject] = (subjectHours[r.subject] || 0) + hours;
                         });
-                    } catch (e) {
-                        console.error("無法解析統計數據:", state.studentData[dateKey]);
-                    }
+                    } catch (e) { console.error("無法解析統計數據:", state.studentData[dateKey]); }
                 }
             });
 
@@ -413,10 +426,7 @@
                     const percentage = ((hours / totalHours) * 100).toFixed(1);
                     const detailEl = document.createElement('div');
                     detailEl.className = 'flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700 text-sm';
-                    detailEl.innerHTML = `
-                        <span>${subject}</span>
-                        <span class="font-semibold text-right">${hours.toFixed(2)} 小時<br><span class="text-xs text-gray-500 dark:text-gray-400">(${percentage}%)</span></span>
-                    `;
+                    detailEl.innerHTML = `<span>${subject}</span><span class="font-semibold text-right">${hours.toFixed(2)} 小時<br><span class="text-xs text-gray-500 dark:text-gray-400">(${percentage}%)</span></span>`;
                     statsDetailsList.appendChild(detailEl);
                 });
             } else {
@@ -424,12 +434,18 @@
             }
 
             if (state.chartInstance) state.chartInstance.destroy();
-            Chart.defaults.color = document.documentElement.classList.contains('dark') ? '#ddd' : '#666';
+            const isDarkMode = document.documentElement.classList.contains('dark');
+            Chart.defaults.color = isDarkMode ? '#ddd' : '#666';
             state.chartInstance = new Chart(document.getElementById('subject-chart'), {
                 type: 'doughnut',
                 data: {
                     labels: Object.keys(subjectHours),
-                    datasets: [{ data: Object.values(subjectHours), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8BC34A', '#F44336', '#E91E63', '#9C27B0', '#673AB7', '#3F51B5', '#03A9F4', '#009688', '#CDDC39', '#FFC107'] }]
+                    datasets: [{ 
+                        data: Object.values(subjectHours), 
+                        backgroundColor: isDarkMode ? CHART_COLORS_DARK : CHART_COLORS_LIGHT,
+                        borderColor: isDarkMode ? 'rgb(31 41 55)' : 'rgb(255, 255, 255)', 
+                        borderWidth: 2
+                    }]
                 },
                 options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { display: Object.keys(subjectHours).length > 0, position: 'bottom' } } }
             });
@@ -447,7 +463,7 @@
                 if (result.role === 'student') {
                     state.viewingStudentId = result.id;
                     document.getElementById('admin-controls').classList.add('hidden');
-                    document.getElementById('main-title').textContent = '溫習日曆';
+                    document.getElementById('main-title').textContent = `${result.id} 的溫習日曆`;
                     await loadStudentData(result.id);
                 } else if (result.role === 'admin') {
                     document.getElementById('admin-controls').classList.remove('hidden');
@@ -509,9 +525,14 @@
         document.getElementById('prev-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() - 1); renderCalendar(); });
         document.getElementById('next-month').addEventListener('click', () => { state.currentDate.setMonth(state.currentDate.getMonth() + 1); renderCalendar(); });
         document.getElementById('close-record-modal').addEventListener('click', () => recordModal.classList.remove('active'));
-        document.getElementById('close-admin-record-modal').addEventListener('click', () => recordModal.classList.remove('active'));
         document.getElementById('add-record-item').addEventListener('click', () => addRecordItem(document.getElementById('record-list')));
         
+        document.getElementById('clear-records-btn').addEventListener('click', () => {
+            const recordList = document.getElementById('record-list');
+            recordList.innerHTML = '';
+            addRecordItem(recordList); // Add one blank item back
+        });
+
         document.getElementById('save-records').addEventListener('click', async () => {
             const recordList = document.getElementById('record-list');
             const dataToSave = Array.from(recordList.querySelectorAll('.record-item')).map(item => ({
@@ -529,8 +550,10 @@
             const studentId = e.target.value;
             state.viewingStudentId = studentId;
             if (studentId) {
+                document.getElementById('main-title').textContent = `${studentId} 的溫習日曆`;
                 await loadStudentData(studentId);
             } else {
+                document.getElementById('main-title').textContent = '管理員面板';
                 state.studentData = {}; 
                 renderCalendar();
             }
@@ -543,10 +566,8 @@
         document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'}));
 
         quoteEl.textContent = `“${QUOTES[Math.floor(Math.random() * QUOTES.length)]}”`;
-        setInterval(updateCountdown, 3600000); // Update countdown every hour is enough
+        setInterval(updateCountdown, 3600000); 
         updateCountdown();
-        
-        // 初始顯示登入頁
         showPage('login-page');
     });
     </script>
