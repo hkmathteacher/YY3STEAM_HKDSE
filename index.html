@@ -436,9 +436,41 @@
         document.getElementById('close-record-modal').addEventListener('click', () => recordModal.classList.remove('active'));
         document.getElementById('close-admin-record-modal').addEventListener('click', () => recordModal.classList.remove('active'));
         document.getElementById('add-record-item').addEventListener('click', () => addRecordItem(document.getElementById('record-list')));
+        
         document.getElementById('save-records').addEventListener('click', async () => {
             const recordList = document.getElementById('record-list');
             const dataToSave = Array.from(recordList.querySelectorAll('.record-item')).map(item => ({
                 subject: item.querySelector('.subject').value,
-                hours: parseFloat(item.querySelector('.hours').v
+                hours: parseFloat(item.querySelector('.hours').value) || 0,
+                content: item.querySelector('.content').value.trim(),
+            })).filter(item => item.content || item.hours > 0);
+            await gasService.saveStudentData(state.viewingStudentId, recordList.dataset.date, JSON.stringify(dataToSave));
+            await loadStudentData(state.viewingStudentId);
+            recordModal.classList.remove('active');
+        });
+
+        document.getElementById('student-selector').addEventListener('change', async (e) => {
+            const studentId = e.target.value;
+            state.viewingStudentId = studentId;
+            if (studentId) {
+                await loadStudentData(studentId);
+            } else {
+                state.studentData = {}; 
+                renderCalendar();
+            }
+        });
+
+        // --- 初始化 ---
+        const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        applyTheme(savedTheme);
+        const manifest = {"name":"YY3 STEAM HKDSE 衝刺計劃","short_name":"DSE衝刺","description":"一個為 HKDSE 考生設計的溫習進度追蹤工具","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#ffffff","orientation":"portrait-primary","icons":[{"src":"https://placehold.co/192x192/4a90e2/ffffff?text=YY3","type":"image/png","sizes":"192x192"},{"src":"https://placehold.co/512x512/4a90e2/ffffff?text=YY3","type":"image/png","sizes":"512x512"}]};
+        document.getElementById('manifest-link').href = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type: 'application/json'}));
+
+        quoteEl.textContent = `“${QUOTES[Math.floor(Math.random() * QUOTES.length)]}”`;
+        setInterval(updateCountdown, 3600000); // Update countdown every hour is enough
+        updateCountdown();
+    });
+    </script>
+</body>
+</html>
 
